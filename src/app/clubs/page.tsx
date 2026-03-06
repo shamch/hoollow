@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ClubCard from "@/components/ClubCard";
 import Button from "@/components/Button";
+import { showToast } from "@/store";
 
 interface Club {
     id: string;
@@ -47,8 +48,9 @@ export default function ClubsPage() {
         try {
             const res = await fetch("/api/clubs");
             if (res.ok) setClubs(await res.json());
+            else showToast("error", "Failed to load clubs");
         } catch (e) {
-            console.error("Failed to fetch clubs", e);
+            showToast("error", "Network error — couldn't load clubs");
         } finally {
             setLoading(false);
         }
@@ -77,10 +79,14 @@ export default function ClubsPage() {
             if (res.ok) {
                 setNewClub({ name: "", description: "", type: "open", domain: "Tech", tags: "" });
                 setShowCreateModal(false);
+                showToast("success", "Club created!");
                 fetchClubs();
+            } else {
+                const data = await res.json();
+                showToast("error", data.error || "Failed to create club");
             }
         } catch (e) {
-            console.error("Failed to create club", e);
+            showToast("error", "Network error — couldn't create club");
         } finally {
             setCreating(false);
         }
@@ -88,10 +94,24 @@ export default function ClubsPage() {
 
     const handleJoin = async (clubId: string) => {
         try {
-            await fetch(`/api/clubs/${clubId}/join`, { method: "POST" });
+            const res = await fetch(`/api/clubs/${clubId}/join`, { method: "POST" });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.requested) {
+                    showToast("info", "Join request sent! Waiting for approval.");
+                } else if (data.joined) {
+                    showToast("success", "Joined club!");
+                } else {
+                    showToast("info", "Left club");
+                }
+            } else if (res.status === 409) {
+                showToast("info", "You already have a pending request");
+            } else {
+                showToast("error", "Failed to join club");
+            }
             fetchClubs();
         } catch (e) {
-            console.error("Failed to join club", e);
+            showToast("error", "Network error");
         }
     };
 

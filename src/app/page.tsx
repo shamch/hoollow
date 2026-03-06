@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Zap,
@@ -16,6 +17,7 @@ import {
   CheckCircle,
   ArrowRight,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Button from "@/components/Button";
@@ -36,6 +38,28 @@ const stagger = {
 };
 
 export default function LandingPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/feed");
+    }
+  }, [status, router]);
+
+  // Show nothing while checking auth to avoid flash
+  if (status === "loading" || status === "authenticated") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <Navbar />

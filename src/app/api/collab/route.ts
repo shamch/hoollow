@@ -63,6 +63,17 @@ export async function POST(req: Request) {
             },
         });
 
+        // Notify the target user
+        const fromUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true } });
+        await (prisma as any).notification.create({
+            data: {
+                type: "collab_request",
+                message: `${fromUser?.name || "Someone"} sent you a collaboration request`,
+                userId: toUserId,
+                relatedId: collab.id,
+            },
+        });
+
         return NextResponse.json(collab, { status: 201 });
     } catch (error) {
         console.error("Collab request error:", error);
@@ -92,6 +103,56 @@ export async function PATCH(req: Request) {
             where: { id },
             data: { status },
         });
+
+        // When a collab is accepted, auto-create an accepted MessageRequest
+        // so both users can DM each other immediately
+        if (status === "accepted") {
+            const existingMsgReq = await (prisma as any).messageRequest.findFirst({
+                where: {
+                    OR: [
+                        { fromUserId: existing.fromUserId, toUserId: existing.toUserId },
+                        { fromUserId: existing.toUserId, toUserId: existing.fromUserId },
+                    ],
+                },
+            });
+
+            if (!existingMsgReq) {
+                await (prisma as any).messageRequest.create({
+                    data: {
+                        fromUserId: existing.fromUserId,
+                        toUserId: existing.toUserId,
+                        status: "accepted",
+                    },
+                });
+            } else if (existingMsgReq.status !== "accepted") {
+                // If a request exists but is pending/rejected, accept it
+                await (prisma as any).messageRequest.update({
+                    where: { id: existingMsgReq.id },
+                    data: { status: "accepted" },
+                });
+            }
+
+            // Create notification for the collab sender
+            const acceptorName = session.user.name || "Someone";
+            await (prisma as any).notification.create({
+                data: {
+                    type: "collab_request",
+                    message: `${acceptorName} accepted your collab request! You can now DM them.`,
+                    userId: existing.fromUserId,
+                    relatedId: session.user.id,
+                },
+            });
+
+            // Award XP for collaboration
+            await prisma.user.update({
+                where: { id: existing.fromUserId },
+                data: { impactXP: { increment: 5 } },
+            });
+            await prisma.user.update({
+                where: { id: existing.toUserId },
+                data: { impactXP: { increment: 5 } },
+            });
+        }
 
         return NextResponse.json(collab);
     } catch (error) {
