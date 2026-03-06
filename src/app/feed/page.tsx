@@ -25,6 +25,7 @@ import XPProgressBar from "@/components/XPProgressBar";
 import Avatar from "@/components/Avatar";
 import Button from "@/components/Button";
 import { useSession } from "next-auth/react";
+import { showToast } from "@/store";
 
 const feedTabs = ["For You", "Trending"];
 
@@ -87,9 +88,11 @@ export default function FeedPage() {
             if (res.ok) {
                 const data = await res.json();
                 setPosts(data);
+            } else {
+                showToast("error", "Failed to load posts");
             }
         } catch (e) {
-            console.error("Failed to fetch posts", e);
+            showToast("error", "Network error — couldn't load posts");
         } finally {
             setLoading(false);
         }
@@ -127,10 +130,14 @@ export default function FeedPage() {
             if (res.ok) {
                 setNewPost({ title: "", body: "", tags: "", imageUrl: "", openToCollab: false });
                 setShowCreateModal(false);
+                showToast("success", "Post published! +5 XP");
                 fetchPosts();
+            } else {
+                const data = await res.json();
+                showToast("error", data.error || "Failed to create post");
             }
         } catch (e) {
-            console.error("Failed to create post", e);
+            showToast("error", "Network error — couldn't publish post");
         } finally {
             setCreating(false);
         }

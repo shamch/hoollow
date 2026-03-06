@@ -26,6 +26,7 @@ model User {
   projects      Project[]
   comments      Comment[]
   upvotes       Upvote[]
+  projectUpvotes ProjectUpvote[]
   clubMembers   ClubMember[]
   clubMessages  ClubMessage[]
   subscriptions Subscription[]
@@ -44,6 +45,9 @@ model User {
   
   // Notifications
   notifications       Notification[]
+  
+  // Club join requests
+  clubJoinRequests    ClubJoinRequest[]
   
   accounts      Account[]
   sessions      Session[]
@@ -128,6 +132,7 @@ model Project {
   authorId    String
   author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   collabRequests CollabRequest[] @relation("collabProject")
+  projectUpvotes ProjectUpvote[]
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -168,6 +173,22 @@ model Upvote {
   @@index([userId])
 }
 
+model ProjectUpvote {
+  id        String   @id @default(cuid())
+  
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
 model Club {
   id          String       @id @default(cuid())
   name        String
@@ -181,6 +202,7 @@ model Club {
   members      ClubMember[]
   messages     ClubMessage[]
   invitations  ClubInvitation[]
+  joinRequests ClubJoinRequest[]
   
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -319,7 +341,7 @@ model ClubInvitation {
 
 model Notification {
   id         String   @id @default(cuid())
-  type       String   // upvote, comment, club_invite, collab_request, message_request, dm
+  type       String   // upvote, comment, club_invite, collab_request, message_request, dm, club_join_request
   message    String   @db.Text
   read       Boolean  @default(false)
   relatedId  String?  // ID of the related entity (post, club, etc.)
@@ -329,5 +351,23 @@ model Notification {
 
   createdAt  DateTime @default(now())
 
+  @@index([userId])
+}
+
+model ClubJoinRequest {
+  id         String   @id @default(cuid())
+  status     String   @default("pending") // pending, accepted, rejected
+  message    String?  @db.Text
+  
+  clubId     String
+  club       Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([clubId, userId])
+  @@index([clubId])
   @@index([userId])
 }

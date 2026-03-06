@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Send, ArrowLeft, Check, X, UserPlus, Inbox } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Check, X, UserPlus, Inbox, Search, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Navbar from "@/components/Navbar";
 import Avatar from "@/components/Avatar";
 import Button from "@/components/Button";
+import { showToast } from "@/store";
 
 interface Conversation {
     requestId: string;
@@ -28,6 +29,14 @@ interface DM {
     fromUser: { id: string; name: string; image: string };
 }
 
+interface SearchUser {
+    id: string;
+    name: string;
+    image: string;
+    role: string;
+    impactXP: number;
+}
+
 export default function MessagesPage() {
     const { data: session } = useSession();
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -37,10 +46,16 @@ export default function MessagesPage() {
     const [messages, setMessages] = useState<DM[]>([]);
     const [messageText, setMessageText] = useState("");
     const [sending, setSending] = useState(false);
-    const [tab, setTab] = useState<"chats" | "requests">("chats");
     const [loading, setLoading] = useState(true);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Search state
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showNewChatModal, setShowNewChatModal] = useState(false);
+    const [userSearchQuery, setUserSearchQuery] = useState("");
+    const [userSearchResults, setUserSearchResults] = useState<SearchUser[]>([]);
+    const [sendingRequest, setSendingRequest] = useState(false);
 
     const fetchConversations = useCallback(async () => {
         try {
@@ -48,17 +63,6 @@ export default function MessagesPage() {
             if (res.ok) setConversations(await res.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    }, []);
-
-    const fetchPendingRequests = useCallback(async () => {
-        try {
-            // Fetch pending requests from notifications or DM endpoint
-            const res = await fetch("/api/dm");
-            if (res.ok) {
-                // We'll also look for pending requests in the dm endpoint
-                // For now - get from conversations
-            }
-        } catch (e) { console.error(e); }
     }, []);
 
     const fetchMessages = useCallback(async (userId: string) => {
@@ -98,8 +102,13 @@ export default function MessagesPage() {
                 const msg = await res.json();
                 setMessages((prev) => [...prev, msg]);
                 setMessageText("");
+            } else {
+                const data = await res.json();
+                showToast("error", data.error || "Failed to send message");
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            showToast("error", "Network error — couldn't send message");
+        }
         finally { setSending(false); }
     };
 
@@ -110,8 +119,11 @@ export default function MessagesPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ requestId, status: "accepted" }),
             });
+            showToast("success", "Message request accepted");
             fetchConversations();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            showToast("error", "Failed to accept request");
+        }
     };
 
     const handleRejectRequest = async (requestId: string) => {
@@ -121,14 +133,71 @@ export default function MessagesPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ requestId, status: "rejected" }),
             });
+            showToast("info", "Message request declined");
             fetchConversations();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            showToast("error", "Failed to decline request");
+        }
     };
 
     const openChat = (userId: string, user: Conversation["user"]) => {
         setActiveChat(userId);
         setActiveChatUser(user);
     };
+
+    // Search users for new chat
+    const handleSearchUsers = async (query: string) => {
+        setUserSearchQuery(query);
+        if (query.length < 2) { setUserSearchResults([]); return; }
+        try {
+            const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+            if (res.ok) {
+                const results = await res.json();
+                // Filter out existing conversations and self
+                const existingUserIds = new Set(conversations.map((c) => c.user.id));
+                setUserSearchResults(
+                    results.filter((u: SearchUser) => u.id !== session?.user?.id && !existingUserIds.has(u.id))
+                );
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const handleSendMessageRequest = async (toUserId: string) => {
+        setSendingRequest(true);
+        try {
+            const res = await fetch("/api/dm", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "request", toUserId }),
+            });
+            if (res.ok) {
+                showToast("success", "Message request sent!");
+                setShowNewChatModal(false);
+                setUserSearchQuery("");
+                setUserSearchResults([]);
+            } else {
+                const data = await res.json();
+                if (res.status === 409 && data.status === "accepted") {
+                    // Already connected — just open the chat
+                    showToast("info", "You're already connected! Opening chat...");
+                    setShowNewChatModal(false);
+                    fetchConversations();
+                } else {
+                    showToast("error", data.error || "Failed to send request");
+                }
+            }
+        } catch (e) {
+            showToast("error", "Network error");
+        }
+        finally { setSendingRequest(false); }
+    };
+
+    // Filter conversations by search
+    const filteredConversations = conversations.filter(
+        (conv) =>
+            !searchQuery ||
+            conv.user.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <>
@@ -140,9 +209,31 @@ export default function MessagesPage() {
                             {/* Sidebar */}
                             <div className={`w-80 border-r border-border flex flex-col ${activeChat ? "hidden md:flex" : "flex w-full md:w-80"}`}>
                                 <div className="p-4 border-b border-border">
-                                    <h2 className="text-lg font-bold text-text-primary font-display flex items-center gap-2">
-                                        <MessageCircle size={20} /> Messages
-                                    </h2>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h2 className="text-lg font-bold text-text-primary font-display flex items-center gap-2">
+                                            <MessageCircle size={20} /> Messages
+                                        </h2>
+                                        <motion.button
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                            onClick={() => setShowNewChatModal(true)}
+                                            className="w-8 h-8 bg-accent text-accent-inverse rounded-full flex items-center justify-center hover:bg-accent-hover transition-colors"
+                                            title="New Chat"
+                                        >
+                                            <Plus size={16} />
+                                        </motion.button>
+                                    </div>
+                                    {/* Search bar */}
+                                    <div className="relative">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search conversations..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2 bg-surface-alt border border-border rounded-pill text-small text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Conversation List */}
@@ -151,14 +242,23 @@ export default function MessagesPage() {
                                         <div className="flex items-center justify-center py-16">
                                             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full" />
                                         </div>
-                                    ) : conversations.length === 0 ? (
+                                    ) : filteredConversations.length === 0 ? (
                                         <div className="text-center py-16 px-4">
                                             <Inbox size={40} className="text-text-muted mx-auto mb-3 opacity-30" />
-                                            <p className="text-small text-text-muted">No conversations yet</p>
-                                            <p className="text-label text-text-muted mt-1">Send a message request from someone&apos;s profile</p>
+                                            <p className="text-small text-text-muted">
+                                                {searchQuery ? "No conversations match your search" : "No conversations yet"}
+                                            </p>
+                                            {!searchQuery && (
+                                                <button
+                                                    onClick={() => setShowNewChatModal(true)}
+                                                    className="text-label text-accent font-semibold mt-2 hover:underline"
+                                                >
+                                                    Start a new conversation
+                                                </button>
+                                            )}
                                         </div>
                                     ) : (
-                                        conversations.map((conv) => (
+                                        filteredConversations.map((conv) => (
                                             <motion.button
                                                 key={conv.requestId}
                                                 whileTap={{ scale: 0.98 }}
@@ -262,6 +362,70 @@ export default function MessagesPage() {
                     </div>
                 </div>
             </main>
+
+            {/* New Chat Modal */}
+            <AnimatePresence>
+                {showNewChatModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                        onClick={() => setShowNewChatModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-surface rounded-card p-6 max-w-md w-full shadow-modal"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="font-display text-xl font-semibold text-text-primary flex items-center gap-2">
+                                    <UserPlus size={18} /> New Conversation
+                                </h2>
+                                <button onClick={() => setShowNewChatModal(false)} className="text-text-muted hover:text-text-primary">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <p className="text-small text-text-muted mb-4">
+                                Search for a user to send a message request.
+                            </p>
+                            <div className="relative mb-4">
+                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                                <input
+                                    type="text"
+                                    value={userSearchQuery}
+                                    onChange={(e) => handleSearchUsers(e.target.value)}
+                                    placeholder="Search by name..."
+                                    className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded-input text-small text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="space-y-1 max-h-60 overflow-y-auto">
+                                {userSearchResults.length === 0 && userSearchQuery.length >= 2 && (
+                                    <p className="text-center py-4 text-small text-text-muted">No users found</p>
+                                )}
+                                {userSearchResults.map((u) => (
+                                    <button
+                                        key={u.id}
+                                        onClick={() => handleSendMessageRequest(u.id)}
+                                        disabled={sendingRequest}
+                                        className="w-full flex items-center gap-3 p-3 rounded-card hover:bg-surface-alt transition-colors text-left"
+                                    >
+                                        <Avatar name={u.name} image={u.image} size="sm" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-small font-medium text-text-primary truncate">{u.name}</p>
+                                            <p className="text-label text-text-muted capitalize">{u.role} · {u.impactXP} XP</p>
+                                        </div>
+                                        <span className="text-label text-accent font-semibold flex-shrink-0">Send Request</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </>
     );
 }

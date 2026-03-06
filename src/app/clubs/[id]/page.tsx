@@ -116,6 +116,10 @@ export default function ClubDetailPage() {
     const [sentInvites, setSentInvites] = useState<any[]>([]);
     const [receivedInvites, setReceivedInvites] = useState<any[]>([]);
 
+    // Join request state
+    const [hasPendingRequest, setHasPendingRequest] = useState(false);
+    const [joinRequests, setJoinRequests] = useState<any[]>([]);
+
     const fetchClub = useCallback(async () => {
         try {
             const res = await fetch(`/api/clubs/${clubId}`);
@@ -185,8 +189,18 @@ export default function ClubDetailPage() {
 
     const handleJoinLeave = async () => {
         try {
-            await fetch(`/api/clubs/${clubId}/join`, { method: "POST" });
-            fetchClub();
+            const res = await fetch(`/api/clubs/${clubId}/join`, { method: "POST" });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.requested) {
+                    setHasPendingRequest(true);
+                } else {
+                    fetchClub();
+                    setHasPendingRequest(false);
+                }
+            } else if (res.status === 409) {
+                setHasPendingRequest(true);
+            }
         } catch (e) { console.error(e); }
     };
 
@@ -245,6 +259,29 @@ export default function ClubDetailPage() {
     useEffect(() => {
         if (club?.isMember) fetchInvitations();
     }, [club?.isMember, fetchInvitations]);
+
+    const fetchJoinRequests = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/clubs/${clubId}/join-requests`);
+            if (res.ok) setJoinRequests(await res.json());
+        } catch (e) { console.error(e); }
+    }, [clubId]);
+
+    useEffect(() => {
+        if (club?.isMember && canManageMembers) fetchJoinRequests();
+    }, [club?.isMember, fetchJoinRequests]);
+
+    const handleRespondJoinRequest = async (requestId: string, status: string) => {
+        try {
+            await fetch(`/api/clubs/${clubId}/join-requests`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ requestId, status }),
+            });
+            fetchJoinRequests();
+            if (status === "accepted") fetchClub();
+        } catch (e) { console.error(e); }
+    };
 
     const handleSearchUsers = async (query: string) => {
         setInviteSearch(query);
@@ -343,9 +380,15 @@ export default function ClubDetailPage() {
                             </div>
                             <div>
                                 {!club.isMember ? (
-                                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleJoinLeave} className="px-6 py-2.5 bg-white text-gray-900 rounded-pill font-semibold text-small hover:bg-white/90 transition-colors shadow-lg">
-                                        Join Club
-                                    </motion.button>
+                                    hasPendingRequest ? (
+                                        <span className="px-6 py-2.5 bg-white/20 text-white rounded-pill font-semibold text-small backdrop-blur-sm">
+                                            Request Pending
+                                        </span>
+                                    ) : (
+                                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleJoinLeave} className="px-6 py-2.5 bg-white text-gray-900 rounded-pill font-semibold text-small hover:bg-white/90 transition-colors shadow-lg">
+                                            {club.type === "open" ? "Join Club" : "Request to Join"}
+                                        </motion.button>
+                                    )
                                 ) : !isOwner ? (
                                     <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleJoinLeave} className="px-6 py-2.5 bg-white/20 text-white rounded-pill font-semibold text-small hover:bg-white/30 transition-colors backdrop-blur-sm flex items-center gap-2">
                                         <LogOut size={14} /> Leave
@@ -363,7 +406,15 @@ export default function ClubDetailPage() {
                         </div>
                         <h2 className="text-xl font-semibold text-text-primary mb-2">Join to participate</h2>
                         <p className="text-text-muted mb-6">Join this club to access the group chat, see members, and collaborate.</p>
-                        <Button variant="primary" onClick={handleJoinLeave}>Join Club</Button>
+                        {hasPendingRequest ? (
+                            <span className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-alt text-text-muted rounded-pill font-semibold text-small">
+                                ✓ Request Pending
+                            </span>
+                        ) : (
+                            <Button variant="primary" onClick={handleJoinLeave}>
+                                {club.type === "open" ? "Join Club" : "Request to Join"}
+                            </Button>
+                        )}
                     </div>
                 ) : (
                     <div className="max-w-5xl mx-auto px-4 py-6">
@@ -586,6 +637,29 @@ export default function ClubDetailPage() {
                                                 ))}
                                             </div>
                                         )}
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* ─── Join Requests (inside Invitations tab) ─── */}
+                            {activeTab === "invitations" && canManageMembers && joinRequests.filter((r: any) => r.status === "pending").length > 0 && (
+                                <motion.div key="joinrequests" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
+                                    <h4 className="text-small font-medium text-text-muted uppercase tracking-wider mb-2">Join Requests</h4>
+                                    <div className="space-y-2">
+                                        {joinRequests.filter((r: any) => r.status === "pending").map((jr: any) => (
+                                            <div key={jr.id} className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card">
+                                                <Avatar name={jr.user.name} image={jr.user.image} size="sm" />
+                                                <div className="flex-1">
+                                                    <p className="text-small font-medium text-text-primary">{jr.user.name}</p>
+                                                    <p className="text-label text-text-muted">{jr.user.impactXP} XP · {jr.user.role}</p>
+                                                    {jr.message && <p className="text-label text-text-secondary mt-1">{jr.message}</p>}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleRespondJoinRequest(jr.id, "accepted")} className="p-1.5 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors"><Check size={14} /></button>
+                                                    <button onClick={() => handleRespondJoinRequest(jr.id, "rejected")} className="p-1.5 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"><X size={14} /></button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </motion.div>
                             )}

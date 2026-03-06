@@ -36,6 +36,19 @@ export const authOptions: NextAuthOptions = {
                 if (session.name) token.name = session.name;
             }
 
+            // Always refetch impactXP from DB to keep it current
+            // (after upvotes, posts, comments etc.)
+            if (token.id && !user) {
+                const freshUser = await prisma.user.findUnique({
+                    where: { id: token.id as string },
+                    select: { impactXP: true, role: true },
+                });
+                if (freshUser) {
+                    token.impactXP = freshUser.impactXP;
+                    token.role = freshUser.role;
+                }
+            }
+
             return token;
         },
         async session({ session, token }) {
