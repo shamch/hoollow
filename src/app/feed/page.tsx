@@ -116,6 +116,7 @@ export default function FeedPage() {
 
     const handleCreatePost = async () => {
         const errors: Record<string, string> = {};
+        if (!newPost.title.trim()) errors.title = "Title is required";
         if (!newPost.body.trim()) errors.body = "Body is required";
         if (Object.keys(errors).length > 0) {
             setPostErrors(errors);
@@ -392,15 +393,16 @@ export default function FeedPage() {
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-small font-medium text-text-primary block mb-1.5">
-                                        Title <span className="text-text-muted">(optional)</span>
+                                        Title <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="text"
                                         value={newPost.title}
                                         onChange={(e) => { setNewPost({ ...newPost, title: e.target.value }); setPostErrors((prev) => ({ ...prev, title: "" })); }}
                                         placeholder="What did you build or learn?"
-                                        className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary placeholder-text-muted focus:outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(0,0,0,0.05)] transition-all"
+                                        className={`w-full px-4 py-3 bg-surface border rounded-input text-body text-text-primary placeholder-text-muted focus:outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(0,0,0,0.05)] transition-all ${postErrors.title ? "border-red-400" : "border-border"}`}
                                     />
+                                    {postErrors.title && <p className="text-label text-red-500 mt-1">{postErrors.title}</p>}
                                 </div>
                                 <div>
                                     <label className="text-small font-medium text-text-primary block mb-1.5">Body</label>
