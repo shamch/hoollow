@@ -112,6 +112,7 @@ export default function MessagesPage() {
                 const msg = await res.json();
                 setMessages((prev) => [...prev, msg]);
                 setMessageText("");
+                showToast("success", "Message sent successfully");
             } else {
                 const data = await res.json();
                 showToast("error", data.error || "Failed to send message");

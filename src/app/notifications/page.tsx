@@ -102,7 +102,8 @@ export default function NotificationsPage() {
     };
 
     const getTimeAgo = (date: string) => {
-        const ms = Date.now() - new Date(date).getTime();
+        let ms = Date.now() - new Date(date).getTime();
+        if (ms < 0) ms = 0;
         const mins = Math.floor(ms / 60000);
         if (mins < 1) return "just now";
         if (mins < 60) return `${mins}m`;
