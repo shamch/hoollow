@@ -137,11 +137,25 @@ export async function PATCH() {
     }
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id || !session?.user?.email) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { otp } = await req.json();
+        if (!otp) {
+            return NextResponse.json({ error: "OTP is required" }, { status: 400 });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { deleteOTP: true, deleteOTPExpires: true },
+        });
+
+        if (!user || user.deleteOTP !== otp || !user.deleteOTPExpires || user.deleteOTPExpires < new Date()) {
+            return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
         }
 
         // Set deletion date to 30 days from now
@@ -150,7 +164,11 @@ export async function DELETE() {
 
         await prisma.user.update({
             where: { id: session.user.id },
-            data: { scheduledDeletionDate: deletionDate },
+            data: { 
+                scheduledDeletionDate: deletionDate,
+                deleteOTP: null,
+                deleteOTPExpires: null,
+            },
         });
 
         // Send confirmation email
