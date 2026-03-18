@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { addXP } from "@/lib/xp";
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
     try {
@@ -20,9 +21,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         if (existing) {
             await prisma.upvote.delete({ where: { id: existing.id } });
             // Remove XP from post author
-            const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } });
+            const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true, title: true } });
             if (post && post.authorId !== userId) {
-                await prisma.user.update({ where: { id: post.authorId }, data: { impactXP: { decrement: 2 } } });
+                await addXP(post.authorId, -2, `Removed upvote on post "${post.title?.substring(0, 20)}..."`);
             }
             return NextResponse.json({ upvoted: false });
         } else {
@@ -30,7 +31,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             // Award +2 XP to post author
             const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true, title: true } });
             if (post && post.authorId !== userId) {
-                await prisma.user.update({ where: { id: post.authorId }, data: { impactXP: { increment: 2 } } });
+                await addXP(post.authorId, 2, `Received upvote on post "${post.title?.substring(0, 20)}..."`);
                 // Create notification
                 const voter = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
                 await (prisma as any).notification.create({

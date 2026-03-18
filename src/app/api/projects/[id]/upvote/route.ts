@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { addXP } from "@/lib/xp";
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
     try {
@@ -27,10 +28,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             });
             // Remove XP
             if (project.authorId !== session.user.id) {
-                await prisma.user.update({
-                    where: { id: project.authorId },
-                    data: { impactXP: { decrement: 2 } },
-                });
+                await addXP(project.authorId, -2, `Removed upvote on project "${project.name?.substring(0, 20)}..."`);
             }
             return NextResponse.json({ upvotes: project.upvotes, upvoted: false });
         } else {
@@ -44,10 +42,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             });
             // Award XP
             if (project.authorId !== session.user.id) {
-                await prisma.user.update({
-                    where: { id: project.authorId },
-                    data: { impactXP: { increment: 2 } },
-                });
+                await addXP(project.authorId, 2, `Received upvote on project "${project.name?.substring(0, 20)}..."`);
             }
             
             // Create notification

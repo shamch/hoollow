@@ -12,9 +12,10 @@ import XPProgressBar from "@/components/XPProgressBar";
 import ProjectCard from "@/components/ProjectCard";
 import FeedCard from "@/components/FeedCard";
 import Button from "@/components/Button";
+import Link from "next/link";
 import {
     MessageCircle,
-    Edit3,
+    Settings,
     X,
     Check,
     Plus,
@@ -130,23 +131,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("projects");
-    const [showEditModal, setShowEditModal] = useState(false);
     const [showShareToast, setShowShareToast] = useState(false);
-
-    // Edit Profile state
-    const [editName, setEditName] = useState("");
-    const [editBio, setEditBio] = useState("");
-    const [editSkills, setEditSkills] = useState<string[]>([]);
-    const [editCollab, setEditCollab] = useState(true);
-    const [editImage, setEditImage] = useState("");
-    const [saving, setSaving] = useState(false);
-    const [uploading, setUploading] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [deleting, setDeleting] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [otp, setOtp] = useState("");
-    const [otpSent, setOtpSent] = useState(false);
-    const [sendingOtp, setSendingOtp] = useState(false);
 
     const userId = params.username;
     const isOwnProfile = 
@@ -187,157 +172,6 @@ export default function ProfilePage({ params }: { params: { username: string } }
         projects: [],
         clubMembers: [],
     } : null);
-
-    // Open edit modal with current data
-    const openEditModal = () => {
-        if (displayUser) {
-            setEditName(displayUser.name || "");
-            setEditBio(displayUser.bio || "");
-            setEditSkills(Array.isArray(displayUser.skills) ? displayUser.skills : []);
-            setEditCollab(displayUser.openToCollab ?? true);
-            setEditImage(displayUser.image || "");
-        }
-        setShowEditModal(true);
-    };
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Restriction: Only 1 photo file, PNG, JPEG, JPG
-        const allowedTypes = ["image/png", "image/jpeg", "image/jpg"];
-        if (!allowedTypes.includes(file.type)) {
-            alert("Please upload only PNG, JPEG or JPG images.");
-            return;
-        }
-
-        setUploading(true);
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "");
-
-        try {
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-                method: "POST",
-                body: formData,
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                setEditImage(data.secure_url);
-            } else {
-                console.error("Upload failed");
-                alert("Photo upload failed. Please try again.");
-            }
-        } catch (error) {
-            console.error("Upload error:", error);
-            alert("An error occurred during upload. Please try again.");
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleSaveProfile = async () => {
-        setSaving(true);
-        try {
-            const res = await fetch("/api/profile", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    displayName: editName,
-                    username: displayUser?.username,
-                    bio: editBio,
-                    skills: editSkills,
-                    role: displayUser?.role || "builder",
-                    openToCollab: editCollab,
-                    image: editImage,
-                }),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.user) {
-                    setUser(data.user);
-                    await update();
-                }
-                setShowEditModal(false);
-                fetchProfile();
-            } else {
-                const errorData = await res.json();
-                console.error("Profile update failed", errorData);
-                alert(errorData.errors?.username || errorData.error || "Profile update failed. Please check your inputs.");
-            }
-        } catch (e) {
-            console.error("Failed to save profile", e);
-            alert("An error occurred while saving. Please try again.");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleSendOTP = async () => {
-        setSendingOtp(true);
-        try {
-            const res = await fetch("/api/profile/otp", { method: "POST" });
-            if (res.ok) {
-                setOtpSent(true);
-                alert("Verification code sent to your email.");
-            } else {
-                alert("Failed to send verification code. Please try again.");
-            }
-        } catch (error) {
-            console.error("OTP send error:", error);
-            alert("An error occurred. Please try again.");
-        } finally {
-            setSendingOtp(false);
-        }
-    };
-
-    const handleDeleteProfile = async () => {
-        if (!showDeleteConfirm) {
-            setShowDeleteConfirm(true);
-            return;
-        }
-
-        if (!otpSent) {
-            await handleSendOTP();
-            return;
-        }
-
-        if (!otp || otp.length !== 6) {
-            alert("Please enter the 6-digit verification code sent to your email.");
-            return;
-        }
-
-        setDeleting(true);
-        try {
-            const res = await fetch("/api/profile", { 
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ otp })
-            });
-            if (res.ok) {
-                await update();
-                setShowDeleteConfirm(false);
-                setOtpSent(false);
-                setOtp("");
-                alert("Account deletion scheduled for 30 days. You can cancel it anytime from the top bar.");
-            } else {
-                const data = await res.json();
-                alert(data.error || "Failed to schedule deletion");
-            }
-        } catch (e) {
-            console.error("Failed to schedule deletion", e);
-            alert("An unexpected error occurred. Please try again.");
-        } finally {
-            setDeleting(false);
-        }
-    };
-
-    const toggleEditSkill = (skill: string) => {
-        setEditSkills((prev) =>
-            prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
-        );
-    };
 
     const handleShare = () => {
         navigator.clipboard.writeText(window.location.href);
@@ -475,9 +309,11 @@ export default function ProfilePage({ params }: { params: { username: string } }
                             >
                                 {isOwnProfile ? (
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                        <Button variant="ghost" size="md" onClick={openEditModal}>
-                                            <Edit3 size={14} className="mr-2" /> Edit Profile
-                                        </Button>
+                                        <Link href="/account">
+                                            <Button variant="ghost" size="md">
+                                                <Settings size={14} className="mr-2" /> Account Center
+                                            </Button>
+                                        </Link>
                                     </motion.div>
                                 ) : (
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -745,232 +581,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
             </main>
             <Footer />
 
-            {/* ─── Edit Profile Modal ─── */}
-            <AnimatePresence>
-                {showEditModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-                        onClick={() => setShowEditModal(false)}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="bg-surface rounded-card p-6 max-w-lg w-full shadow-modal relative max-h-[85vh] overflow-y-auto"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <motion.button
-                                whileHover={{ rotate: 90 }}
-                                transition={{ duration: 0.2 }}
-                                onClick={() => setShowEditModal(false)}
-                                className="absolute top-4 right-4 text-text-muted hover:text-text-primary z-10"
-                            >
-                                <X size={20} />
-                            </motion.button>
 
-                            <h2 className="font-display text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                                <Edit3 size={18} /> Edit Profile
-                            </h2>
-
-                            <div className="space-y-5">
-                                {/* Profile Photo */}
-                                <div className="flex flex-col items-center gap-4 p-4 bg-surface-alt rounded-card border border-border">
-                                    <div className="relative group">
-                                        <Avatar name={editName || "User"} image={editImage} size="xl" />
-                                        {uploading && (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                                                <Loader2 size={24} className="animate-spin text-accent" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileUpload}
-                                        accept="image/png, image/jpeg, image/jpg"
-                                        className="hidden"
-                                    />
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="text-accent hover:text-accent-hover flex items-center gap-2"
-                                        disabled={uploading}
-                                    >
-                                        {uploading ? (
-                                            <>Uploading...</>
-                                        ) : (
-                                            <>Change Photo</>
-                                        )}
-                                    </Button>
-                                    <p className="text-[10px] text-text-muted">Single file: PNG, JPEG (max 5MB)</p>
-                                </div>
-                                {/* Name */}
-                                <div>
-                                    <label className="text-small font-medium text-text-primary block mb-1.5">Display Name</label>
-                                    <input
-                                        type="text"
-                                        value={editName}
-                                        onChange={(e) => setEditName(e.target.value)}
-                                        placeholder="Your name"
-                                        className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary placeholder-text-muted focus:outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(0,0,0,0.05)] transition-all"
-                                    />
-                                </div>
-
-                                {/* Bio */}
-                                <div>
-                                    <label className="text-small font-medium text-text-primary block mb-1.5">
-                                        Bio <span className="text-text-muted">{editBio.length}/140</span>
-                                    </label>
-                                    <textarea
-                                        value={editBio}
-                                        onChange={(e) => setEditBio(e.target.value.slice(0, 140))}
-                                        placeholder="What drives you? What are you building?"
-                                        rows={3}
-                                        className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary placeholder-text-muted focus:outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(0,0,0,0.05)] transition-all resize-none"
-                                    />
-                                </div>
-
-                                {/* Skills */}
-                                <div>
-                                    <label className="text-small font-medium text-text-primary block mb-1.5">
-                                        Skills <span className="text-text-muted">{editSkills.length} selected</span>
-                                    </label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {skillOptions.map((skill) => (
-                                            <motion.button
-                                                key={skill}
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                onClick={() => toggleEditSkill(skill)}
-                                                className={`text-small px-3 py-1.5 rounded-pill font-medium transition-all duration-200 ${editSkills.includes(skill)
-                                                    ? "bg-accent text-accent-inverse shadow-sm"
-                                                    : "bg-surface-alt text-text-secondary hover:bg-border"
-                                                    }`}
-                                            >
-                                                {editSkills.includes(skill) && <Check size={12} className="inline mr-1" />}
-                                                {skill}
-                                            </motion.button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Open to Collab */}
-                                <div className="flex items-center justify-between p-4 bg-surface-alt rounded-card">
-                                    <div>
-                                        <p className="text-small font-medium text-text-primary">Open to Collaborate</p>
-                                        <p className="text-label text-text-muted">Let others know you&apos;re available</p>
-                                    </div>
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => setEditCollab(!editCollab)}
-                                        className={`w-12 h-7 rounded-pill relative transition-colors ${editCollab ? "bg-success" : "bg-border"}`}
-                                    >
-                                        <motion.div
-                                            animate={{ x: editCollab ? 20 : 2 }}
-                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                            className="absolute top-0.5 w-6 h-6 rounded-full bg-text-primary shadow"
-                                        />
-                                    </motion.button>
-                                </div>
-
-                                {/* Danger Zone */}
-                                <div className="pt-6 border-t border-red-500/10">
-                                    <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-card p-4">
-                                        <div className="flex items-start gap-3 mb-4">
-                                            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600">
-                                                <AlertTriangle size={18} />
-                                            </div>
-                                            <div>
-                                                <p className="text-small font-semibold text-red-600">Danger Zone</p>
-                                                <p className="text-label text-red-600/70">Once you delete your profile, there is no going back. Please be certain.</p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="space-y-4">
-                                            {showDeleteConfirm && otpSent && (
-                                                <div className="space-y-2">
-                                                    <p className="text-label font-medium text-text-secondary">Enter 6-digit Verification Code:</p>
-                                                    <input
-                                                        type="text"
-                                                        maxLength={6}
-                                                        value={otp}
-                                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                                                        placeholder="000000"
-                                                        className="w-full bg-surface border border-red-200 dark:border-red-900/30 rounded-btn px-4 py-2 text-center text-xl font-mono tracking-[10px] focus:outline-none focus:border-red-500 transition-colors"
-                                                    />
-                                                    <button 
-                                                        onClick={handleSendOTP}
-                                                        disabled={sendingOtp}
-                                                        className="text-[10px] text-red-600 hover:text-red-700 font-medium"
-                                                    >
-                                                        {sendingOtp ? "Resending..." : "Didn't get the code? Resend"}
-                                                    </button>
-                                                </div>
-                                            )}
-                                            
-                                            <Button
-                                                variant={showDeleteConfirm ? "primary" : "ghost"}
-                                                onClick={handleDeleteProfile}
-                                                disabled={deleting || (otpSent && otp.length !== 6) || sendingOtp}
-                                                className={`w-full justify-center gap-2 ${showDeleteConfirm ? "bg-red-600 hover:bg-red-700 text-white border-transparent" : "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"}`}
-                                            >
-                                                {deleting ? (
-                                                    <span className="flex items-center gap-2">
-                                                        <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Trash2 size={14}/></motion.span> Processing...
-                                                    </span>
-                                                ) : sendingOtp ? (
-                                                    <span className="flex items-center gap-2">
-                                                        <Loader2 className="animate-spin" size={14} /> Sending Code...
-                                                    </span>
-                                                ) : showDeleteConfirm ? (
-                                                    otpSent ? "Verify & Schedule Deletion" : "Send Verification Code"
-                                                ) : (
-                                                    <>
-                                                        <Trash2 size={14} /> Delete Profile
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-                                        
-                                        {showDeleteConfirm && (
-                                            <button 
-                                                onClick={() => {
-                                                    setShowDeleteConfirm(false);
-                                                    setOtpSent(false);
-                                                    setOtp("");
-                                                }}
-                                                className="w-full text-center text-label text-text-muted mt-3 hover:text-text-primary"
-                                            >
-                                                Nevermind, keep my profile
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
-                                    <Button variant="ghost" onClick={() => setShowEditModal(false)}>Cancel</Button>
-                                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                                        <Button
-                                            variant="primary"
-                                            onClick={handleSaveProfile}
-                                            disabled={saving || uploading || !editName}
-                                            className={(saving || uploading) ? "opacity-50" : ""}
-                                        >
-                                            {saving ? "Saving..." : uploading ? "Uploading Photo..." : "Save Changes"}
-                                        </Button>
-                                    </motion.div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* ─── Share Toast ─── */}
             <AnimatePresence>

@@ -62,6 +62,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Name and description are required" }, { status: 400 });
         }
 
+        const existingClub = await prisma.club.findFirst({
+            where: { name: { equals: name, mode: "insensitive" } },
+        });
+
+        if (existingClub) {
+            return NextResponse.json({ error: "A club with this name already exists" }, { status: 400 });
+        }
+
         const club = await prisma.club.create({
             data: {
                 name,

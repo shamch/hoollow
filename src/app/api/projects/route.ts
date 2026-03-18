@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { addXP } from "@/lib/xp";
 
 export async function GET() {
     try {
@@ -50,6 +51,9 @@ export async function POST(req: Request) {
                 author: { select: { id: true, name: true, image: true, role: true, impactXP: true } },
             },
         });
+
+        // Award +10 XP for launching a project
+        await addXP(session.user.id, 10, `Launched a Project: ${name.substring(0, 20)}...`);
 
         return NextResponse.json(project, { status: 201 });
     } catch (error) {

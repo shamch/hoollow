@@ -17,7 +17,7 @@ export async function sendDeletionEmail(email: string, deletionDate: Date) {
 
   try {
     const result = await resend.emails.send({
-      from: 'Hoollow <onboarding@resend.dev>',
+      from: 'Hoollow <no-reply@hoollow.com>',
       to: email,
       subject: 'Account Deletion Scheduled',
       html: `
@@ -48,7 +48,7 @@ export async function sendOTPEmail(email: string, otp: string) {
 
   try {
     const result = await resend.emails.send({
-      from: 'Hoollow <onboarding@resend.dev>',
+      from: 'Hoollow <no-reply@hoollow.com>',
       to: email,
       subject: 'Your Account Deletion OTP',
       html: `

@@ -366,6 +366,13 @@ export default function Navbar() {
                                             >
                                                 View Profile
                                             </Link>
+                                            <Link
+                                                href="/account"
+                                                className="block px-4 py-2 text-small text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
+                                                onClick={() => setProfileMenuOpen(false)}
+                                            >
+                                                Account Center
+                                            </Link>
                                             <button
                                                 onClick={() => signOut({ callbackUrl: "/" })}
                                                 className="w-full text-left px-4 py-2 text-small text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors flex items-center gap-2"

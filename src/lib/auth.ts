@@ -14,6 +14,21 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "jwt",
     },
+    events: {
+        async createUser({ user }) {
+            try {
+                await (prisma as any).xPHistory.create({
+                    data: {
+                        userId: user.id,
+                        amount: 50,
+                        reason: "Account Creation",
+                    },
+                });
+            } catch (error) {
+                console.error("Error recording initial XP:", error);
+            }
+        },
+    },
     callbacks: {
         async jwt({ token, user, trigger, session }) {
             // On initial sign-in, `user` only has id/name/email/image from the adapter.

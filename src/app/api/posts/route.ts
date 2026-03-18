@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { addXP } from "@/lib/xp";
 
 export async function GET() {
     try {
@@ -73,6 +74,9 @@ export async function POST(req: Request) {
                 },
             },
         });
+
+        // Award +5 XP for creating a post
+        await addXP(session.user.id, 5, `Created a Post: ${title ? title.substring(0, 20) : body.substring(0, 20)}...`);
 
         return NextResponse.json(post, { status: 201 });
     } catch (error) {

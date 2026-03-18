@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Search, ArrowRight, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, ArrowRight, X, Star, Crown, TrendingUp } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ClubCard from "@/components/ClubCard";
@@ -133,20 +133,87 @@ export default function ClubsPage() {
         <>
             <Navbar />
             <main className="min-h-screen">
-                {/* ─── Create Club Banner ─── */}
-                <section className="bg-accent">
-                    <div className="max-w-content mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div>
-                            <h2 className="font-display text-2xl font-semibold text-bg mb-1">
-                                Start your own Club. Earn collective ImpactXP.
-                            </h2>
-                            <p className="text-bg/60 text-small">
-                                Form a team, collaborate on projects, and grow together.
-                            </p>
+                {/* ─── Premium Header ─── */}
+                <section className="relative overflow-hidden bg-black py-20 border-b border-zinc-800/50">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,0,255,0.15),transparent_50%)]" />
+                    <div className="max-w-content mx-auto px-6 relative z-10">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+                            <div className="max-w-2xl text-center md:text-left">
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-wider mb-6"
+                                >
+                                    <Star size={12} /> Community Hub
+                                </motion.div>
+                                <motion.h1 
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.1 }}
+                                    className="text-4xl md:text-6xl font-black text-white mb-6 leading-[1.1]"
+                                >
+                                    Find your crew. <br />
+                                    <span className="text-zinc-500">Scale your impact.</span>
+                                </motion.h1>
+                                <motion.p 
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                    className="text-zinc-400 text-lg mb-8 max-w-xl"
+                                >
+                                    Clubs are the heart of Hoollow. Form a team, collaborate on ambitious projects, and earn collective ImpactXP.
+                                </motion.p>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="flex flex-wrap items-center justify-center md:justify-start gap-4"
+                                >
+                                    <Button variant="primary" size="lg" onClick={() => setShowCreateModal(true)} className="rounded-full px-8">
+                                        Start a Club <ArrowRight size={18} className="ml-2" />
+                                    </Button>
+                                    <div className="flex -space-x-2">
+                                        {[1, 2, 3, 4].map((i) => (
+                                            <div key={i} className="w-10 h-10 rounded-full border-2 border-black bg-zinc-800" />
+                                        ))}
+                                        <div className="w-10 h-10 rounded-full border-2 border-black bg-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                                            +2k
+                                        </div>
+                                    </div>
+                                    <span className="text-small text-zinc-500 ml-2">Builders already joined</span>
+                                </motion.div>
+                            </div>
+                            
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.4 }}
+                                className="hidden md:block relative group"
+                            >
+                                <div className="absolute -inset-1 bg-gradient-to-r from-accent/50 to-purple-500/50 rounded-[32px] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+                                <div className="relative w-[340px] aspect-[4/5] bg-zinc-900 border border-zinc-800 rounded-[30px] p-6 flex flex-col justify-between overflow-hidden">
+                                     <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 blur-3xl -mr-16 -mt-16" />
+                                     <div className="space-y-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
+                                            <Crown size={24} />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white">Elite Builders Club</h3>
+                                        <p className="text-sm text-zinc-400 line-clamp-3">The most active community of open-source builders on Hoollow. Working on NextGen AI.</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            <span className="px-2 py-1 rounded-md bg-zinc-800 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">AI/ML</span>
+                                            <span className="px-2 py-1 rounded-md bg-zinc-800 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Open Source</span>
+                                        </div>
+                                     </div>
+                                     <div className="pt-6 border-t border-zinc-800/50 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-zinc-800" />
+                                            <span className="text-xs text-zinc-500">842 Members</span>
+                                        </div>
+                                        <div className="text-accent font-bold">2.4k XP</div>
+                                     </div>
+                                </div>
+                            </motion.div>
                         </div>
-                        <Button variant="white-outline" size="md" onClick={() => setShowCreateModal(true)}>
-                            Create Club <ArrowRight size={14} className="ml-1" />
-                        </Button>
                     </div>
                 </section>
 
@@ -198,7 +265,12 @@ export default function ClubsPage() {
 
                         {/* ─── Main Grid ─── */}
                         <div>
-                            <h1 className="font-display text-section text-text-primary mb-8">Find your crew.</h1>
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-2xl font-bold text-white">Explore Clubs</h2>
+                                <div className="text-small text-zinc-500 bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
+                                    {filteredClubs.length} Clubs Available
+                                </div>
+                            </div>
 
                             {/* Mobile Filters */}
                             <div className="lg:hidden mb-6 space-y-4">
@@ -269,89 +341,167 @@ export default function ClubsPage() {
             </main>
             <Footer />
 
-            {/* ─── Create Club Modal ─── */}
-            {showCreateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                    <div className="bg-surface rounded-card p-6 max-w-lg w-full shadow-modal relative">
-                        <button onClick={() => setShowCreateModal(false)} className="absolute top-4 right-4 text-text-muted hover:text-text-primary">
-                            <X size={20} />
-                        </button>
-                        <h2 className="font-display text-xl font-semibold text-text-primary mb-6">Create Club</h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-small font-medium text-text-primary block mb-1.5">Club Name</label>
-                                <input
-                                    type="text"
-                                    value={newClub.name}
-                                    onChange={(e) => setNewClub({ ...newClub, name: e.target.value })}
-                                    placeholder="AI Builders Collective"
-                                    className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-small font-medium text-text-primary block mb-1.5">Description</label>
-                                <textarea
-                                    value={newClub.description}
-                                    onChange={(e) => setNewClub({ ...newClub, description: e.target.value })}
-                                    placeholder="What's this club about?"
-                                    rows={3}
-                                    className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors resize-none"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-small font-medium text-text-primary block mb-1.5">Type</label>
-                                    <select
-                                        value={newClub.type}
-                                        onChange={(e) => setNewClub({ ...newClub, type: e.target.value })}
-                                        className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary focus:outline-none focus:border-accent transition-colors"
-                                    >
-                                        <option value="open">Open</option>
-                                        <option value="invite">Invite Only</option>
-                                        <option value="application">Application</option>
-                                    </select>
+            {/* ─── Interactive Create Club Modal ─── */}
+            <AnimatePresence>
+                {showCreateModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowCreateModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md" 
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="bg-[#0c0c0e] border border-zinc-800 rounded-[32px] w-full max-w-5xl overflow-hidden shadow-2xl relative z-10 grid grid-cols-1 lg:grid-cols-[1fr_400px]"
+                        >
+                            <div className="p-8 lg:p-12 overflow-y-auto max-h-[90vh]">
+                                <div className="mb-8">
+                                    <h2 className="text-3xl font-bold text-white mb-2">Create a Club</h2>
+                                    <p className="text-zinc-500">Build your community and grow together.</p>
                                 </div>
-                                <div>
-                                    <label className="text-small font-medium text-text-primary block mb-1.5">Domain</label>
-                                    <select
-                                        value={newClub.domain}
-                                        onChange={(e) => setNewClub({ ...newClub, domain: e.target.value })}
-                                        className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary focus:outline-none focus:border-accent transition-colors"
-                                    >
-                                        <option value="Tech">Tech</option>
-                                        <option value="Design">Design</option>
-                                        <option value="Business">Business</option>
-                                        <option value="Research">Research</option>
-                                    </select>
+
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest pl-1">Club Name</label>
+                                            <input
+                                                type="text"
+                                                value={newClub.name}
+                                                onChange={(e) => setNewClub({ ...newClub, name: e.target.value })}
+                                                placeholder="e.g. AI Tinkerers"
+                                                className="w-full px-5 py-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl text-white placeholder:text-zinc-600 focus:outline-none focus:border-accent transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest pl-1">Domain</label>
+                                            <select
+                                                value={newClub.domain}
+                                                onChange={(e) => setNewClub({ ...newClub, domain: e.target.value })}
+                                                className="w-full px-5 py-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl text-white focus:outline-none focus:border-accent transition-all appearance-none"
+                                            >
+                                                {domainFilters.filter(d => d !== "All").map(d => (
+                                                    <option key={d} value={d} className="bg-zinc-900">{d}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest pl-1">Description</label>
+                                        <textarea
+                                            value={newClub.description}
+                                            onChange={(e) => setNewClub({ ...newClub, description: e.target.value })}
+                                            placeholder="What is the mission of this club?"
+                                            rows={4}
+                                            className="w-full px-5 py-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl text-white placeholder:text-zinc-600 focus:outline-none focus:border-accent transition-all resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest pl-1">Membership</label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {["open", "invite", "application"].map((t) => (
+                                                    <button
+                                                        key={t}
+                                                        onClick={() => setNewClub({ ...newClub, type: t })}
+                                                        className={`py-3 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
+                                                            newClub.type === t 
+                                                            ? "bg-white text-black border-white" 
+                                                            : "bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:border-zinc-700"
+                                                        }`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest pl-1">Tags (Comma separated)</label>
+                                            <input
+                                                type="text"
+                                                value={newClub.tags}
+                                                onChange={(e) => setNewClub({ ...newClub, tags: e.target.value })}
+                                                placeholder="e.g. Demos, Coding, Hack"
+                                                className="w-full px-5 py-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl text-white placeholder:text-zinc-600 focus:outline-none focus:border-accent transition-all"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-6 flex items-center justify-between border-t border-zinc-800/50">
+                                        <button 
+                                            onClick={() => setShowCreateModal(false)}
+                                            className="text-zinc-500 hover:text-white font-medium transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <Button
+                                            variant="primary"
+                                            size="lg"
+                                            onClick={handleCreateClub}
+                                            disabled={creating || !newClub.name.trim() || !newClub.description.trim()}
+                                            className="rounded-full px-10"
+                                        >
+                                            {creating ? "Launching..." : "Launch Club"}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <label className="text-small font-medium text-text-primary block mb-1.5">
-                                    Tags <span className="text-text-muted">(comma separated)</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newClub.tags}
-                                    onChange={(e) => setNewClub({ ...newClub, tags: e.target.value })}
-                                    placeholder="AI/ML, Demos, Community"
-                                    className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
-                                />
+
+                            <div className="hidden lg:flex flex-col bg-[#141416] p-12 border-l border-zinc-800/50 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 blur-[100px] -mr-32 -mt-32" />
+                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 blur-[100px] -ml-32 -mb-32" />
+                                
+                                <div className="relative z-10">
+                                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-[0.2em] mb-8">Live Preview</p>
+                                    
+                                    <div className="pointer-events-none scale-110 origin-top-left pt-4">
+                                        <ClubCard 
+                                            club={{
+                                                id: "preview",
+                                                name: newClub.name || "Club Name",
+                                                description: newClub.description || "Describe your club's mission and what makes it unique in this space.",
+                                                type: newClub.type,
+                                                domain: newClub.domain,
+                                                gradient: gradientOptions[0],
+                                                tags: newClub.tags ? newClub.tags.split(",").map(t => t.trim()) : [],
+                                                memberCount: 1,
+                                                members: [],
+                                                impactXP: 0
+                                            }}
+                                        />
+                                    </div>
+
+                                    <div className="mt-20 space-y-6">
+                                        <div className="flex gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent shrink-0">
+                                                <Star size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="text-white font-medium text-sm">Boost Member Growth</p>
+                                                <p className="text-zinc-500 text-xs mt-1">Clear descriptions help builders find your tribe.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 shrink-0">
+                                                <TrendingUp size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="text-white font-medium text-sm">Earn Collective XP</p>
+                                                <p className="text-zinc-500 text-xs mt-1">Every project upvote adds to your club's status.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <Button variant="ghost" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-                                <Button
-                                    variant="primary"
-                                    onClick={handleCreateClub}
-                                    disabled={creating || !newClub.name || !newClub.description}
-                                    className={creating ? "opacity-50" : ""}
-                                >
-                                    {creating ? "Creating..." : "Create Club"}
-                                </Button>
-                            </div>
-                        </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
         </>
     );
 }

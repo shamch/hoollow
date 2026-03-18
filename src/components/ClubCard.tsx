@@ -57,25 +57,29 @@ export default function ClubCard({ club, onJoin, className = "" }: ClubCardProps
 
     return (
         <motion.div
-            whileHover={{ y: -3 }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
             onClick={handleClick}
-            className={`bg-surface border border-border rounded-card overflow-hidden transition-all duration-200 cursor-pointer hover:shadow-card-hover ${className}`}
+            className={`group bg-surface border border-border rounded-[24px] overflow-hidden transition-all duration-300 cursor-pointer hover:border-accent/30 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] ${className}`}
         >
             {/* Banner */}
-            <div className="w-full h-28 relative" style={{ background: club.gradient }}>
+            <div className="w-full h-32 relative overflow-hidden" style={{ background: club.gradient }}>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 {club.currentUserRole && (
-                    <span className={`absolute top-3 right-3 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-pill backdrop-blur-sm ${ROLE_COLORS[club.currentUserRole]}`}>
+                    <span className={`absolute top-4 right-4 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 ${ROLE_COLORS[club.currentUserRole]}`}>
                         {ROLE_ICON[club.currentUserRole]} {ROLE_LABEL[club.currentUserRole]}
                     </span>
                 )}
+                <div className="absolute top-4 left-4 bg-black/20 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-full">
+                    <span className="text-[10px] font-bold text-white/90 uppercase tracking-wider">{club.domain}</span>
+                </div>
             </div>
 
-            <div className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="text-card-title font-semibold text-text-primary">{club.name}</h3>
+            <div className="p-5">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                    <h3 className="text-lg font-bold text-text-primary group-hover:text-accent transition-colors">{club.name}</h3>
                     <ImpactXPBadge score={club.impactXP || 0} size="sm" showIcon={false} />
                 </div>
-                <p className="text-small text-text-secondary mb-3 line-clamp-2">{club.description}</p>
+                <p className="text-small text-text-secondary mb-4 line-clamp-2 leading-relaxed">{club.description}</p>
 
                 <div className="flex items-center gap-3 mb-3">
                     {memberNames.length > 0 && <AvatarStack names={memberNames} />}
