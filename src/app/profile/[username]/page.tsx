@@ -144,6 +144,9 @@ export default function ProfilePage({ params }: { params: { username: string } }
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [deleting, setDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [otp, setOtp] = useState("");
+    const [otpSent, setOtpSent] = useState(false);
+    const [sendingOtp, setSendingOtp] = useState(false);
 
     const userId = params.username;
     const isOwnProfile = 
@@ -271,18 +274,52 @@ export default function ProfilePage({ params }: { params: { username: string } }
         }
     };
 
+    const handleSendOTP = async () => {
+        setSendingOtp(true);
+        try {
+            const res = await fetch("/api/profile/otp", { method: "POST" });
+            if (res.ok) {
+                setOtpSent(true);
+                alert("Verification code sent to your email.");
+            } else {
+                alert("Failed to send verification code. Please try again.");
+            }
+        } catch (error) {
+            console.error("OTP send error:", error);
+            alert("An error occurred. Please try again.");
+        } finally {
+            setSendingOtp(false);
+        }
+    };
+
     const handleDeleteProfile = async () => {
         if (!showDeleteConfirm) {
             setShowDeleteConfirm(true);
             return;
         }
 
+        if (!otpSent) {
+            await handleSendOTP();
+            return;
+        }
+
+        if (!otp || otp.length !== 6) {
+            alert("Please enter the 6-digit verification code sent to your email.");
+            return;
+        }
+
         setDeleting(true);
         try {
-            const res = await fetch("/api/profile", { method: "DELETE" });
+            const res = await fetch("/api/profile", { 
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ otp })
+            });
             if (res.ok) {
                 await update();
                 setShowDeleteConfirm(false);
+                setOtpSent(false);
+                setOtp("");
                 alert("Account deletion scheduled for 30 days. You can cancel it anytime from the top bar.");
             } else {
                 const data = await res.json();
@@ -854,28 +891,59 @@ export default function ProfilePage({ params }: { params: { username: string } }
                                             </div>
                                         </div>
                                         
-                                        <Button
-                                            variant={showDeleteConfirm ? "primary" : "ghost"}
-                                            onClick={handleDeleteProfile}
-                                            disabled={deleting}
-                                            className={`w-full justify-center gap-2 ${showDeleteConfirm ? "bg-red-600 hover:bg-red-700 text-white border-transparent" : "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"}`}
-                                        >
-                                            {deleting ? (
-                                                <span className="flex items-center gap-2">
-                                                    <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Trash2 size={14}/></motion.span> Deleting...
-                                                </span>
-                                            ) : showDeleteConfirm ? (
-                                                "Confirm Permanently Delete"
-                                            ) : (
-                                                <>
-                                                    <Trash2 size={14} /> Delete Profile
-                                                </>
+                                        <div className="space-y-4">
+                                            {showDeleteConfirm && otpSent && (
+                                                <div className="space-y-2">
+                                                    <p className="text-label font-medium text-text-secondary">Enter 6-digit Verification Code:</p>
+                                                    <input
+                                                        type="text"
+                                                        maxLength={6}
+                                                        value={otp}
+                                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                                        placeholder="000000"
+                                                        className="w-full bg-surface border border-red-200 dark:border-red-900/30 rounded-btn px-4 py-2 text-center text-xl font-mono tracking-[10px] focus:outline-none focus:border-red-500 transition-colors"
+                                                    />
+                                                    <button 
+                                                        onClick={handleSendOTP}
+                                                        disabled={sendingOtp}
+                                                        className="text-[10px] text-red-600 hover:text-red-700 font-medium"
+                                                    >
+                                                        {sendingOtp ? "Resending..." : "Didn't get the code? Resend"}
+                                                    </button>
+                                                </div>
                                             )}
-                                        </Button>
+                                            
+                                            <Button
+                                                variant={showDeleteConfirm ? "primary" : "ghost"}
+                                                onClick={handleDeleteProfile}
+                                                disabled={deleting || (otpSent && otp.length !== 6) || sendingOtp}
+                                                className={`w-full justify-center gap-2 ${showDeleteConfirm ? "bg-red-600 hover:bg-red-700 text-white border-transparent" : "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"}`}
+                                            >
+                                                {deleting ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Trash2 size={14}/></motion.span> Processing...
+                                                    </span>
+                                                ) : sendingOtp ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <Loader2 className="animate-spin" size={14} /> Sending Code...
+                                                    </span>
+                                                ) : showDeleteConfirm ? (
+                                                    otpSent ? "Verify & Schedule Deletion" : "Send Verification Code"
+                                                ) : (
+                                                    <>
+                                                        <Trash2 size={14} /> Delete Profile
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
                                         
                                         {showDeleteConfirm && (
                                             <button 
-                                                onClick={() => setShowDeleteConfirm(false)}
+                                                onClick={() => {
+                                                    setShowDeleteConfirm(false);
+                                                    setOtpSent(false);
+                                                    setOtp("");
+                                                }}
                                                 className="w-full text-center text-label text-text-muted mt-3 hover:text-text-primary"
                                             >
                                                 Nevermind, keep my profile

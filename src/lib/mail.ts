@@ -35,3 +35,35 @@ export async function sendDeletionEmail(email: string, deletionDate: Date) {
     console.error('Error sending deletion email:', error);
   }
 }
+
+export async function sendOTPEmail(email: string, otp: string) {
+  if (!process.env.RESEND_API_KEY) {
+    console.log(`[Resend Mock] OTP email would be sent to ${email}. OTP: ${otp}`);
+    return;
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  try {
+    await resend.emails.send({
+      from: 'Hoollow <notifications@hoollow.com>',
+      to: email,
+      subject: 'Your Account Deletion OTP',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #6366f1;">Verification Code</h1>
+          <p>You requested to delete your Hoollow account. Please use the following One-Time Password (OTP) to verify this action:</p>
+          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;">
+            ${otp}
+          </div>
+          <p>This code will expire in 10 minutes.</p>
+          <p style="color: #ef4444; font-weight: bold;">If you did not request this, please secure your account immediately.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="color: #666; font-size: 12px;">This is an automated notification from Hoollow.</p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Error sending OTP email:', error);
+  }
+}

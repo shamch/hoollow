@@ -57,6 +57,8 @@ model User {
   sessions      Session[]
 
   scheduledDeletionDate DateTime?
+  deleteOTP             String?
+  deleteOTPExpires      DateTime?
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
