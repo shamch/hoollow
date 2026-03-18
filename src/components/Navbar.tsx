@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, LogOut, Sparkles, Bell, MessageCircle, Search, Loader2 } from "lucide-react";
+import { Menu, X, LogOut, Sparkles, Bell, MessageCircle, Search, Loader2, AlertTriangle } from "lucide-react";
 import ImpactXPBadge from "./ImpactXPBadge";
 import Avatar from "./Avatar";
 import { useState, useEffect, useCallback } from "react";
@@ -20,7 +20,7 @@ const navLinks = [
 
 export default function Navbar() {
     const pathname = usePathname();
-    const { data: session, status } = useSession();
+    const { data: session, status, update } = useSession();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
@@ -30,9 +30,58 @@ export default function Navbar() {
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);
 
+    const [showDeletionBanner, setShowDeletionBanner] = useState(false);
+    const [timeLeft, setTimeLeft] = useState("");
+
     const userName = session?.user?.name || "User";
     const userXP = session?.user?.impactXP || 0;
     const profileSlug = session?.user?.username || session?.user?.id || "me";
+
+    useEffect(() => {
+        if (session?.user?.scheduledDeletionDate) {
+            const deletionDate = new Date(session.user.scheduledDeletionDate);
+            const now = new Date();
+            
+            if (deletionDate > now) {
+                setShowDeletionBanner(true);
+                
+                const timer = setInterval(() => {
+                    const now = new Date();
+                    const distance = deletionDate.getTime() - now.getTime();
+                    
+                    if (distance < 0) {
+                        clearInterval(timer);
+                        setShowDeletionBanner(false);
+                    } else {
+                        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                        
+                        setTimeLeft(`${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                    }
+                }, 1000);
+                
+                return () => clearInterval(timer);
+            } else {
+                setShowDeletionBanner(false);
+            }
+        } else {
+            setShowDeletionBanner(false);
+        }
+    }, [session?.user?.scheduledDeletionDate]);
+
+    const handleCancelDeletion = async () => {
+        try {
+            const res = await fetch("/api/profile", { method: "PATCH" });
+            if (res.ok) {
+                await update();
+                setShowDeletionBanner(false);
+            }
+        } catch (error) {
+            console.error("Failed to cancel deletion", error);
+        }
+    };
 
     const fetchUnread = useCallback(async () => {
         if (status !== "authenticated") return;
@@ -98,12 +147,46 @@ export default function Navbar() {
     }, [profileMenuOpen, showResults]);
 
     return (
-        <motion.nav
-            initial={{ y: -60, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className={`sticky top-0 z-50 h-[60px] border-b border-black bg-black transition-shadow duration-300 ${scrolled ? "shadow-[0_18px_45px_rgba(0,0,0,0.85)]" : "shadow-[0_18px_45px_rgba(0,0,0,0.6)]"}`}
-        >
+        <>
+            <AnimatePresence>
+                {showDeletionBanner && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-red-600 text-white py-2 px-4 flex flex-wrap items-center justify-center gap-4 text-[11px] md:text-small font-medium relative z-[60] overflow-hidden"
+                    >
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle size={14} />
+                            <span className="hidden sm:inline">Account is in deletion phase, save it by clicking this button:</span>
+                            <span className="sm:hidden">Account deleting in:</span>
+                        </div>
+                        <div className="bg-white/20 px-3 py-1 rounded-pill font-mono tracking-wider tabular-nums">
+                            {timeLeft}
+                        </div>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleCancelDeletion}
+                            className="bg-white text-red-600 px-4 py-1 rounded-pill text-[10px] font-bold hover:bg-red-50 transition-colors shadow-sm"
+                        >
+                            KEEP MY ACCOUNT
+                        </motion.button>
+                        <button 
+                            onClick={() => setShowDeletionBanner(false)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
+                        >
+                            <X size={14} />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <motion.nav
+                initial={{ y: -60, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className={`sticky top-0 z-50 h-[60px] border-b border-black bg-black transition-shadow duration-300 ${scrolled ? "shadow-[0_18px_45px_rgba(0,0,0,0.85)]" : "shadow-[0_18px_45px_rgba(0,0,0,0.6)]"}`}
+            >
             <div className="max-w-content mx-auto h-full px-6 flex items-center gap-8">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-1.5 flex-shrink-0 group">
@@ -384,5 +467,6 @@ export default function Navbar() {
                 )}
             </AnimatePresence>
         </motion.nav>
+        </>
     );
 }

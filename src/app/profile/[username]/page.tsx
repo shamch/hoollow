@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
@@ -29,10 +29,10 @@ import {
     Twitter,
     Trash2,
     AlertTriangle,
+    Loader2,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { xpHistory } from "@/lib/mockData";
-import { CldUploadWidget } from "next-cloudinary";
 
 const skillOptions = [
     "React", "Next.js", "TypeScript", "Python", "Node.js", "Flutter",
@@ -126,7 +126,7 @@ const fadeInUp = {
 };
 
 export default function ProfilePage({ params }: { params: { username: string } }) {
-    const { data: session } = useSession();
+    const { data: session, update } = useSession();
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("projects");
@@ -140,6 +140,8 @@ export default function ProfilePage({ params }: { params: { username: string } }
     const [editCollab, setEditCollab] = useState(true);
     const [editImage, setEditImage] = useState("");
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [deleting, setDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -195,6 +197,43 @@ export default function ProfilePage({ params }: { params: { username: string } }
         setShowEditModal(true);
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Restriction: Only 1 photo file, PNG, JPEG, JPG
+        const allowedTypes = ["image/png", "image/jpeg", "image/jpg"];
+        if (!allowedTypes.includes(file.type)) {
+            alert("Please upload only PNG, JPEG or JPG images.");
+            return;
+        }
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "");
+
+        try {
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setEditImage(data.secure_url);
+            } else {
+                console.error("Upload failed");
+                alert("Photo upload failed. Please try again.");
+            }
+        } catch (error) {
+            console.error("Upload error:", error);
+            alert("An error occurred during upload. Please try again.");
+        } finally {
+            setUploading(false);
+        }
+    };
+
     const handleSaveProfile = async () => {
         setSaving(true);
         try {
@@ -203,6 +242,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     displayName: editName,
+                    username: displayUser?.username,
                     bio: editBio,
                     skills: editSkills,
                     role: displayUser?.role || "builder",
@@ -211,11 +251,21 @@ export default function ProfilePage({ params }: { params: { username: string } }
                 }),
             });
             if (res.ok) {
+                const data = await res.json();
+                if (data.user) {
+                    setUser(data.user);
+                    await update();
+                }
                 setShowEditModal(false);
                 fetchProfile();
+            } else {
+                const errorData = await res.json();
+                console.error("Profile update failed", errorData);
+                alert(errorData.errors?.username || errorData.error || "Profile update failed. Please check your inputs.");
             }
         } catch (e) {
             console.error("Failed to save profile", e);
+            alert("An error occurred while saving. Please try again.");
         } finally {
             setSaving(false);
         }
@@ -231,14 +281,16 @@ export default function ProfilePage({ params }: { params: { username: string } }
         try {
             const res = await fetch("/api/profile", { method: "DELETE" });
             if (res.ok) {
-                await signOut({ callbackUrl: "/" });
+                await update();
+                setShowDeleteConfirm(false);
+                alert("Account deletion scheduled for 30 days. You can cancel it anytime from the top bar.");
             } else {
                 const data = await res.json();
-                alert(data.error || "Failed to delete profile");
+                alert(data.error || "Failed to schedule deletion");
             }
         } catch (e) {
-            console.error("Failed to delete profile", e);
-            alert("An unexpected error occurred");
+            console.error("Failed to schedule deletion", e);
+            alert("An unexpected error occurred. Please try again.");
         } finally {
             setDeleting(false);
         }
@@ -690,26 +742,35 @@ export default function ProfilePage({ params }: { params: { username: string } }
                             <div className="space-y-5">
                                 {/* Profile Photo */}
                                 <div className="flex flex-col items-center gap-4 p-4 bg-surface-alt rounded-card border border-border">
-                                    <Avatar name={editName || "User"} image={editImage} size="xl" />
-                                    <CldUploadWidget
-                                        uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
-                                        onSuccess={(result: any) => {
-                                            if (result?.info?.secure_url) {
-                                                setEditImage(result.info.secure_url);
-                                            }
-                                        }}
-                                    >
-                                        {({ open }) => (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => open()}
-                                                className="text-accent hover:text-accent-hover"
-                                            >
-                                                Change Photo
-                                            </Button>
+                                    <div className="relative group">
+                                        <Avatar name={editName || "User"} image={editImage} size="xl" />
+                                        {uploading && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                                                <Loader2 size={24} className="animate-spin text-accent" />
+                                            </div>
                                         )}
-                                    </CldUploadWidget>
+                                    </div>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileUpload}
+                                        accept="image/png, image/jpeg, image/jpg"
+                                        className="hidden"
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="text-accent hover:text-accent-hover flex items-center gap-2"
+                                        disabled={uploading}
+                                    >
+                                        {uploading ? (
+                                            <>Uploading...</>
+                                        ) : (
+                                            <>Change Photo</>
+                                        )}
+                                    </Button>
+                                    <p className="text-[10px] text-text-muted">Single file: PNG, JPEG (max 5MB)</p>
                                 </div>
                                 {/* Name */}
                                 <div>
@@ -830,10 +891,10 @@ export default function ProfilePage({ params }: { params: { username: string } }
                                         <Button
                                             variant="primary"
                                             onClick={handleSaveProfile}
-                                            disabled={saving || !editName}
-                                            className={saving ? "opacity-50" : ""}
+                                            disabled={saving || uploading || !editName}
+                                            className={(saving || uploading) ? "opacity-50" : ""}
                                         >
-                                            {saving ? "Saving..." : "Save Changes"}
+                                            {saving ? "Saving..." : uploading ? "Uploading Photo..." : "Save Changes"}
                                         </Button>
                                     </motion.div>
                                 </div>

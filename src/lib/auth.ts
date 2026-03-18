@@ -35,6 +35,9 @@ export const authOptions: NextAuthOptions = {
                 if (session.role) token.role = session.role;
                 if (session.impactXP !== undefined) token.impactXP = session.impactXP;
                 if (session.name) token.name = session.name;
+                if (session.image) token.picture = session.image;
+                if (session.user?.image) token.picture = session.user.image;
+                if (session.user?.name) token.name = session.user.name;
             }
 
             // Always refetch impactXP from DB to keep it current
@@ -42,12 +45,15 @@ export const authOptions: NextAuthOptions = {
             if (token.id && !user) {
                 const freshUser = await prisma.user.findUnique({
                     where: { id: token.id as string },
-                    select: { impactXP: true, role: true, username: true },
+                    select: { impactXP: true, role: true, username: true, image: true, name: true, scheduledDeletionDate: true },
                 });
                 if (freshUser) {
                     token.impactXP = freshUser.impactXP;
                     token.role = freshUser.role;
                     token.username = freshUser.username;
+                    token.picture = freshUser.image;
+                    token.name = freshUser.name;
+                    token.scheduledDeletionDate = freshUser.scheduledDeletionDate?.toISOString() || null;
                 }
             }
 
@@ -59,6 +65,9 @@ export const authOptions: NextAuthOptions = {
                 session.user.username = token.username as string;
                 session.user.role = token.role as string;
                 session.user.impactXP = token.impactXP as number;
+                session.user.name = token.name as string;
+                session.user.image = token.picture as string;
+                session.user.scheduledDeletionDate = token.scheduledDeletionDate as string | null;
             }
             return session;
         },

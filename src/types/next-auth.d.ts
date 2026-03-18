@@ -8,6 +8,7 @@ declare module "next-auth" {
             username?: string | null;
             role: string;
             impactXP: number;
+            scheduledDeletionDate?: string | null;
         } & DefaultSession["user"];
     }
 
@@ -24,5 +25,6 @@ declare module "next-auth/jwt" {
         username?: string | null;
         role: string;
         impactXP: number;
+        scheduledDeletionDate?: string | null;
     }
 }
