@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { xpHistory } from "@/lib/mockData";
+import { CldUploadWidget } from "next-cloudinary";
 
 const skillOptions = [
     "React", "Next.js", "TypeScript", "Python", "Node.js", "Flutter",
@@ -110,6 +111,7 @@ interface UserProfile {
     skills: string[];
     openToCollab: boolean;
     createdAt: string;
+    email?: string;
     posts: any[];
     projects: any[];
     clubMembers: { club: { id: string; name: string; gradient: string; _count: { members: number } } }[];
@@ -136,12 +138,16 @@ export default function ProfilePage({ params }: { params: { username: string } }
     const [editBio, setEditBio] = useState("");
     const [editSkills, setEditSkills] = useState<string[]>([]);
     const [editCollab, setEditCollab] = useState(true);
+    const [editImage, setEditImage] = useState("");
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const userId = params.username;
-    const isOwnProfile = (session?.user?.username === userId) || (session?.user?.id === user?.id && user !== null);
+    const isOwnProfile = 
+        (session?.user?.username?.toLowerCase() === userId?.toLowerCase()) || 
+        (session?.user?.id === user?.id && user !== null) ||
+        (session?.user?.email === user?.email && user !== null);
 
     const fetchProfile = async () => {
         try {
@@ -184,6 +190,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
             setEditBio(displayUser.bio || "");
             setEditSkills(Array.isArray(displayUser.skills) ? displayUser.skills : []);
             setEditCollab(displayUser.openToCollab ?? true);
+            setEditImage(displayUser.image || "");
         }
         setShowEditModal(true);
     };
@@ -200,6 +207,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
                     skills: editSkills,
                     role: displayUser?.role || "builder",
                     openToCollab: editCollab,
+                    image: editImage,
                 }),
             });
             if (res.ok) {
@@ -680,6 +688,29 @@ export default function ProfilePage({ params }: { params: { username: string } }
                             </h2>
 
                             <div className="space-y-5">
+                                {/* Profile Photo */}
+                                <div className="flex flex-col items-center gap-4 p-4 bg-surface-alt rounded-card border border-border">
+                                    <Avatar name={editName || "User"} image={editImage} size="xl" />
+                                    <CldUploadWidget
+                                        uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
+                                        onSuccess={(result: any) => {
+                                            if (result?.info?.secure_url) {
+                                                setEditImage(result.info.secure_url);
+                                            }
+                                        }}
+                                    >
+                                        {({ open }) => (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => open()}
+                                                className="text-accent hover:text-accent-hover"
+                                            >
+                                                Change Photo
+                                            </Button>
+                                        )}
+                                    </CldUploadWidget>
+                                </div>
                                 {/* Name */}
                                 <div>
                                     <label className="text-small font-medium text-text-primary block mb-1.5">Display Name</label>
