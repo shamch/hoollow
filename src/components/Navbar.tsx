@@ -269,7 +269,7 @@ export default function Navbar() {
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute right-0 top-12 w-48 bg-background border border-border rounded-card shadow-lg py-2 z-50"
+                                             className="absolute right-0 top-12 w-48 bg-black border border-border rounded-card shadow-lg py-2 z-50"
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <div className="px-4 py-2 border-b border-border">
