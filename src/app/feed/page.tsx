@@ -82,7 +82,7 @@ export default function FeedPage() {
 
     const userName = session?.user?.name || "User";
     const userXP = session?.user?.impactXP || 50;
-    const profileSlug = session?.user?.id || "me";
+    const profileSlug = session?.user?.username || session?.user?.id || "me";
 
     const fetchPosts = useCallback(async () => {
         try {
@@ -343,7 +343,7 @@ export default function FeedPage() {
                                             transition={{ delay: 0.3 + i * 0.05 }}
                                         >
                                             <Link
-                                                href={`/profile/${user.id}`}
+                                                href={`/profile/${user.username || user.id}`}
                                                 className="flex items-center gap-3 hover:bg-surface-alt -mx-2 px-2 py-1.5 rounded-btn transition-all duration-200 group"
                                             >
                                                 <span className="text-small font-bold text-text-muted w-4">{i + 1}</span>

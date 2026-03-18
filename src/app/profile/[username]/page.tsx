@@ -27,7 +27,10 @@ import {
     Link as LinkIcon,
     Github,
     Twitter,
+    Trash2,
+    AlertTriangle,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { xpHistory } from "@/lib/mockData";
 
 const skillOptions = [
@@ -91,8 +94,8 @@ function AnimatedStat({ value, label }: { value: number; label: string }) {
 
     return (
         <div className="text-center">
-            <p className="text-xl font-bold text-slate-900 dark:text-bg tabular-nums">{display}</p>
-            <p className="text-label text-slate-500 dark:text-bg/40">{label}</p>
+            <p className="text-xl font-bold text-text-primary tabular-nums">{display}</p>
+            <p className="text-label text-text-muted uppercase tracking-wider">{label}</p>
         </div>
     );
 }
@@ -134,9 +137,11 @@ export default function ProfilePage({ params }: { params: { username: string } }
     const [editSkills, setEditSkills] = useState<string[]>([]);
     const [editCollab, setEditCollab] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const userId = params.username;
-    const isOwnProfile = session?.user?.id === userId;
+    const isOwnProfile = (session?.user?.username === userId) || (session?.user?.id === user?.id && user !== null);
 
     const fetchProfile = async () => {
         try {
@@ -205,6 +210,29 @@ export default function ProfilePage({ params }: { params: { username: string } }
             console.error("Failed to save profile", e);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDeleteProfile = async () => {
+        if (!showDeleteConfirm) {
+            setShowDeleteConfirm(true);
+            return;
+        }
+
+        setDeleting(true);
+        try {
+            const res = await fetch("/api/profile", { method: "DELETE" });
+            if (res.ok) {
+                await signOut({ callbackUrl: "/" });
+            } else {
+                const data = await res.json();
+                alert(data.error || "Failed to delete profile");
+            }
+        } catch (e) {
+            console.error("Failed to delete profile", e);
+            alert("An unexpected error occurred");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -288,7 +316,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.6 }}
-                    className="bg-accent py-12 md:py-16 relative overflow-hidden"
+                    className="bg-surface border-b border-border py-12 md:py-16 relative overflow-hidden"
                 >
                     {/* Decorative background */}
                     <div className="absolute inset-0 pointer-events-none">
@@ -319,20 +347,20 @@ export default function ProfilePage({ params }: { params: { username: string } }
                                 transition={{ delay: 0.2 }}
                                 className="flex-1"
                             >
-                                <h1 className="font-display text-[2rem] font-bold text-slate-900 dark:text-bg mb-2">
+                                <h1 className="font-display text-[2rem] font-bold text-text-primary mb-2">
                                     {displayUser.name || "User"}
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-3 mb-4">
                                     <RoleBadge role={displayUser.role} />
                                     <ImpactXPBadge score={displayUser.impactXP} size="md" />
                                     {memberSince && (
-                                        <span className="text-label text-slate-500 dark:text-bg/40 flex items-center gap-1">
+                                        <span className="text-label text-text-muted flex items-center gap-1">
                                             <Calendar size={12} /> {memberSince}
                                         </span>
                                     )}
                                 </div>
                                 {displayUser.bio && (
-                                    <p className="text-slate-700 dark:text-bg/70 text-body mb-4 max-w-lg">{displayUser.bio}</p>
+                                    <p className="text-text-secondary text-body mb-4 max-w-lg">{displayUser.bio}</p>
                                 )}
                                 <Sparkline data={xpHistory} />
                                 <div className="flex flex-wrap gap-6 mt-6">
@@ -350,13 +378,13 @@ export default function ProfilePage({ params }: { params: { username: string } }
                             >
                                 {isOwnProfile ? (
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                        <Button variant="white-outline" size="md" onClick={openEditModal}>
+                                        <Button variant="ghost" size="md" onClick={openEditModal}>
                                             <Edit3 size={14} className="mr-2" /> Edit Profile
                                         </Button>
                                     </motion.div>
                                 ) : (
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                        <Button variant="white" size="md" onClick={async () => {
+                                        <Button variant="primary" size="md" onClick={async () => {
                                             try {
                                                 const res = await fetch("/api/dm", {
                                                     method: "POST",
@@ -379,7 +407,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
                                     onClick={handleShare}
-                                    className="w-10 h-10 rounded-btn border border-white/20 flex items-center justify-center text-slate-600 hover:text-slate-900 dark:text-bg/60 dark:hover:text-bg hover:border-white/40 transition-colors"
+                                    className="w-10 h-10 rounded-btn border border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:border-accent transition-colors"
                                 >
                                     <Share2 size={16} />
                                 </motion.button>
@@ -721,8 +749,51 @@ export default function ProfilePage({ params }: { params: { username: string } }
                                     </motion.button>
                                 </div>
 
+                                {/* Danger Zone */}
+                                <div className="pt-6 border-t border-red-500/10">
+                                    <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-card p-4">
+                                        <div className="flex items-start gap-3 mb-4">
+                                            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600">
+                                                <AlertTriangle size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-small font-semibold text-red-600">Danger Zone</p>
+                                                <p className="text-label text-red-600/70">Once you delete your profile, there is no going back. Please be certain.</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <Button
+                                            variant={showDeleteConfirm ? "primary" : "ghost"}
+                                            onClick={handleDeleteProfile}
+                                            disabled={deleting}
+                                            className={`w-full justify-center gap-2 ${showDeleteConfirm ? "bg-red-600 hover:bg-red-700 text-white border-transparent" : "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"}`}
+                                        >
+                                            {deleting ? (
+                                                <span className="flex items-center gap-2">
+                                                    <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Trash2 size={14}/></motion.span> Deleting...
+                                                </span>
+                                            ) : showDeleteConfirm ? (
+                                                "Confirm Permanently Delete"
+                                            ) : (
+                                                <>
+                                                    <Trash2 size={14} /> Delete Profile
+                                                </>
+                                            )}
+                                        </Button>
+                                        
+                                        {showDeleteConfirm && (
+                                            <button 
+                                                onClick={() => setShowDeleteConfirm(false)}
+                                                className="w-full text-center text-label text-text-muted mt-3 hover:text-text-primary"
+                                            >
+                                                Nevermind, keep my profile
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
                                 {/* Actions */}
-                                <div className="flex justify-end gap-3 pt-2">
+                                <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
                                     <Button variant="ghost" onClick={() => setShowEditModal(false)}>Cancel</Button>
                                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                                         <Button

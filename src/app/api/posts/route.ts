@@ -69,7 +69,7 @@ export async function POST(req: Request) {
             },
             include: {
                 author: {
-                    select: { id: true, name: true, image: true, role: true, impactXP: true },
+                    select: { id: true, name: true, username: true, image: true, role: true, impactXP: true },
                 },
             },
         });
@@ -107,7 +107,7 @@ export async function PATCH(req: Request) {
             where: { id },
             data: updateData,
             include: {
-                author: { select: { id: true, name: true, image: true, role: true, impactXP: true } },
+                author: { select: { id: true, name: true, username: true, image: true, role: true, impactXP: true } },
             },
         });
 

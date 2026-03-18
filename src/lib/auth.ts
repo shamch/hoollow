@@ -24,6 +24,7 @@ export const authOptions: NextAuthOptions = {
                 });
                 if (dbUser) {
                     token.id = dbUser.id;
+                    token.username = dbUser.username;
                     token.role = dbUser.role;
                     token.impactXP = dbUser.impactXP;
                 }
@@ -41,11 +42,12 @@ export const authOptions: NextAuthOptions = {
             if (token.id && !user) {
                 const freshUser = await prisma.user.findUnique({
                     where: { id: token.id as string },
-                    select: { impactXP: true, role: true },
+                    select: { impactXP: true, role: true, username: true },
                 });
                 if (freshUser) {
                     token.impactXP = freshUser.impactXP;
                     token.role = freshUser.role;
+                    token.username = freshUser.username;
                 }
             }
 
@@ -53,9 +55,10 @@ export const authOptions: NextAuthOptions = {
         },
         async session({ session, token }) {
             if (token && session.user) {
-                session.user.id = token.id;
-                session.user.role = token.role;
-                session.user.impactXP = token.impactXP;
+                session.user.id = token.id as string;
+                session.user.username = token.username as string;
+                session.user.role = token.role as string;
+                session.user.impactXP = token.impactXP as number;
             }
             return session;
         },

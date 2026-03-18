@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, LogOut, Sparkles, Bell, MessageCircle } from "lucide-react";
+import { Menu, X, LogOut, Sparkles, Bell, MessageCircle, Search, Loader2 } from "lucide-react";
 import ImpactXPBadge from "./ImpactXPBadge";
 import Avatar from "./Avatar";
 import { useState, useEffect, useCallback } from "react";
@@ -25,10 +25,14 @@ export default function Navbar() {
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<{ posts: any[], users: any[] }>({ posts: [], users: [] });
+    const [isSearching, setIsSearching] = useState(false);
+    const [showResults, setShowResults] = useState(false);
 
     const userName = session?.user?.name || "User";
     const userXP = session?.user?.impactXP || 0;
-    const profileSlug = session?.user?.id || "me";
+    const profileSlug = session?.user?.username || session?.user?.id || "me";
 
     const fetchUnread = useCallback(async () => {
         if (status !== "authenticated") return;
@@ -54,14 +58,44 @@ export default function Navbar() {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // Close profile menu on outside click
+    // Search effect
     useEffect(() => {
-        const handleClick = () => setProfileMenuOpen(false);
-        if (profileMenuOpen) {
+        if (!searchQuery.trim() || searchQuery.length < 2) {
+            setSearchResults({ posts: [], users: [] });
+            setShowResults(false);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSearching(true);
+            setShowResults(true);
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setSearchResults(data);
+                }
+            } catch (e) {
+                console.error("Search fetch error:", e);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Close on outside click
+    useEffect(() => {
+        const handleClick = () => {
+            setProfileMenuOpen(false);
+            setShowResults(false);
+        };
+        if (profileMenuOpen || showResults) {
             document.addEventListener("click", handleClick);
             return () => document.removeEventListener("click", handleClick);
         }
-    }, [profileMenuOpen]);
+    }, [profileMenuOpen, showResults]);
 
     return (
         <motion.nav
@@ -70,7 +104,7 @@ export default function Navbar() {
             transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             className={`sticky top-0 z-50 h-[60px] border-b border-black bg-black transition-shadow duration-300 ${scrolled ? "shadow-[0_18px_45px_rgba(0,0,0,0.85)]" : "shadow-[0_18px_45px_rgba(0,0,0,0.6)]"}`}
         >
-            <div className="max-w-content mx-auto h-full px-6 flex items-center justify-between">
+            <div className="max-w-content mx-auto h-full px-6 flex items-center gap-8">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-1.5 flex-shrink-0 group">
                     <motion.span
@@ -81,8 +115,90 @@ export default function Navbar() {
                     </motion.span>
                 </Link>
 
+                {/* Search Bar */}
+                <div className="relative flex-1 max-w-sm hidden md:block" onClick={(e) => e.stopPropagation()}>
+                    <div className="relative group">
+                        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? "text-white" : "text-zinc-500 group-focus-within:text-zinc-300"}`} size={16} />
+                        <input
+                            type="text"
+                            placeholder="Search build, builders..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-zinc-900/50 border border-zinc-800 rounded-full pl-10 pr-4 py-1.5 text-small text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-700 focus:bg-zinc-900 transition-all"
+                        />
+                        {isSearching && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-zinc-500" size={14} />
+                        )}
+                    </div>
+
+                    {/* Search Results Dropdown */}
+                    <AnimatePresence>
+                        {showResults && searchQuery.length >= 2 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-[60] py-2"
+                            >
+                                {isSearching ? (
+                                    <div className="p-4 text-center text-zinc-500 text-small">Searching...</div>
+                                ) : (searchResults.posts.length === 0 && searchResults.users.length === 0) ? (
+                                    <div className="p-4 text-center text-zinc-500 text-small">No results found for &quot;{searchQuery}&quot;</div>
+                                ) : (
+                                    <div className="max-h-[70vh] overflow-y-auto">
+                                        {searchResults.users.length > 0 && (
+                                            <div className="mb-2">
+                                                <p className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Builders</p>
+                                                {searchResults.users.map((user) => (
+                                                    <Link
+                                                        key={user.id}
+                                                    href={`/profile/${user.username || user.id}`}
+                                                        className="flex items-center gap-3 px-4 py-2 hover:bg-zinc-800 transition-colors"
+                                                        onClick={() => { setShowResults(false); setSearchQuery(""); }}
+                                                    >
+                                                        <Avatar name={user.name} image={user.image} size="sm" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-small font-medium text-white truncate">{user.name}</p>
+                                                            <p className="text-[10px] text-zinc-500 truncate">@{user.username || user.id}</p>
+                                                        </div>
+                                                        <ImpactXPBadge score={user.impactXP} size="sm" showIcon={false} />
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {searchResults.posts.length > 0 && (
+                                            <div>
+                                                <p className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Posts</p>
+                                                {searchResults.posts.map((post) => (
+                                                    <Link
+                                                        key={post.id}
+                                                        href={`/feed/${post.id}`}
+                                                        className="flex items-center gap-3 px-4 py-2 hover:bg-zinc-800 transition-colors"
+                                                        onClick={() => { setShowResults(false); setSearchQuery(""); }}
+                                                    >
+                                                        <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                                                            <Sparkles size={14} className="text-zinc-500" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-small font-medium text-white truncate">{post.title}</p>
+                                                            <p className="text-[10px] text-zinc-500 truncate">by {post.author.name}</p>
+                                                        </div>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="px-4 py-2 border-t border-zinc-800 bg-black/20">
+                                    <p className="text-[10px] text-zinc-500 text-center">Press Enter to see all results</p>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
                 {/* Desktop Nav Links */}
-                <div className="hidden md:flex items-center gap-8">
+                <div className="hidden md:flex items-center gap-8 ml-auto">
                     {navLinks.map((link) => (
                         <Link
                             key={link.href}
@@ -153,7 +269,7 @@ export default function Navbar() {
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute right-0 top-12 w-48 bg-surface border border-border rounded-card shadow-card-hover py-2 z-50"
+                                            className="absolute right-0 top-12 w-48 bg-background border border-border rounded-card shadow-lg py-2 z-50"
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <div className="px-4 py-2 border-b border-border">
@@ -195,18 +311,14 @@ export default function Navbar() {
                 {/* Mobile menu button */}
                 <motion.button
                     whileTap={{ scale: 0.9 }}
-                    className="md:hidden p-2 text-white"
+                    className="md:hidden p-2 text-white ml-auto"
                     onClick={() => setMobileOpen(!mobileOpen)}
                 >
                     <AnimatePresence mode="wait">
                         {mobileOpen ? (
-                            <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                                <X size={20} />
-                            </motion.div>
+                            <X size={20} />
                         ) : (
-                            <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                                <Menu size={20} />
-                            </motion.div>
+                            <Menu size={20} />
                         )}
                     </AnimatePresence>
                 </motion.button>
@@ -220,7 +332,7 @@ export default function Navbar() {
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="md:hidden absolute top-[60px] left-0 right-0 bg-black border-b border-black shadow-[0_18px_45px_rgba(0,0,0,0.85)] z-50 overflow-hidden"
+                        className="md:hidden absolute top-[60px] left-0 right-0 bg-black border-b border-zinc-800 shadow-2xl z-50 overflow-hidden"
                     >
                         <div className="px-6 py-4 flex flex-col gap-3">
                             {navLinks.map((link, i) => (
@@ -244,7 +356,7 @@ export default function Navbar() {
                                     </Link>
                                 </motion.div>
                             ))}
-                            <div className="flex items-center gap-3 pt-3 border-t border-border">
+                            <div className="flex items-center gap-3 pt-3 border-t border-zinc-800">
                                 {status === "authenticated" && session?.user ? (
                                     <>
                                         <ImpactXPBadge score={userXP} size="sm" />

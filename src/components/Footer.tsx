@@ -97,7 +97,7 @@ export default function Footer() {
                 {/* Copyright */}
                 <div className="border-t border-border mt-12 pt-8 text-center">
                     <p className="text-small text-text-muted">
-                        © {new Date().getFullYear()} Hoollow. Built by 11 teenage innovators. All rights reserved.
+                        © {new Date().getFullYear()} Hoollow. Built by 6 teenage innovators. All rights reserved.
                     </p>
                 </div>
             </div>

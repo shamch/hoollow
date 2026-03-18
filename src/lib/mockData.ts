@@ -72,7 +72,7 @@ export interface MockEndorsement {
 export const mockUsers: MockUser[] = [
     {
         id: "u1",
-        name: "Ayush Kumar",
+        name: "Ayush",
         email: "ayush@hoollow.com",
         image: "",
         role: "founder",
@@ -479,17 +479,12 @@ export const mockEndorsements: MockEndorsement[] = [
 
 // ─── Team Members ──────────────────────────────────────────
 export const teamMembers = [
-    { name: "Ayush Kumar", role: "Founder & CEO", age: 15 },
-    { name: "Riya Kapoor", role: "CTO" },
-    { name: "Aditya Joshi", role: "Lead Designer" },
-    { name: "Meera Iyer", role: "Backend Lead" },
-    { name: "Karan Thakur", role: "Frontend Developer" },
-    { name: "Divya Srinivasan", role: "ML Engineer" },
-    { name: "Harsh Pandey", role: "DevOps" },
-    { name: "Nisha Verma", role: "Community Lead" },
-    { name: "Siddharth Roy", role: "Mobile Developer" },
-    { name: "Pooja Agarwal", role: "Growth Lead" },
-    { name: "Rahul Deshmukh", role: "Content & Comms" },
+    { name: "Ayush", role: "Founder & CEO", age: 15 },
+    { name: "Jayish", role: "Developer", age: 16 },
+    { name: "Saksham", role: "Developer", age: 15 },
+    { name: "Faiyan", role: "Developer", age: 15 },
+    { name: "Darsh", role: "Marketing", age: 16 },
+    { name: "Harsh", role: "Marketing", age: 15 },
 ];
 
 // ─── XP History (for sparkline) ──────────────────────────────

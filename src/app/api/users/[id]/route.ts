@@ -6,11 +6,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         // First try with clubMembers (if schema has been pushed)
         let user;
         try {
-            user = await prisma.user.findUnique({
-                where: { id: params.id },
+            user = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        { id: params.id },
+                        { username: params.id }
+                    ]
+                },
                 select: {
                     id: true,
                     name: true,
+                    username: true,
                     image: true,
                     role: true,
                     impactXP: true,
@@ -23,14 +29,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                         take: 10,
                         include: {
                             _count: { select: { upvotes: true, comments: true } },
-                            author: { select: { id: true, name: true, image: true, role: true, impactXP: true } },
+                            author: { select: { id: true, name: true, username: true, image: true, role: true, impactXP: true } },
                         },
                     },
                     projects: {
                         orderBy: { createdAt: "desc" },
                         take: 10,
                         include: {
-                            author: { select: { id: true, name: true, image: true, role: true, impactXP: true } },
+                            author: { select: { id: true, name: true, username: true, image: true, role: true, impactXP: true } },
                         },
                     },
                     clubMembers: {
@@ -44,11 +50,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             });
         } catch {
             // Fallback without clubMembers if table doesn't exist yet
-            user = await prisma.user.findUnique({
-                where: { id: params.id },
+            user = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        { id: params.id },
+                        { username: params.id }
+                    ]
+                },
                 select: {
                     id: true,
                     name: true,
+                    username: true,
                     image: true,
                     role: true,
                     impactXP: true,
@@ -61,14 +73,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                         take: 10,
                         include: {
                             _count: { select: { upvotes: true, comments: true } },
-                            author: { select: { id: true, name: true, image: true, role: true, impactXP: true } },
+                            author: { select: { id: true, name: true, username: true, image: true, role: true, impactXP: true } },
                         },
                     },
                     projects: {
                         orderBy: { createdAt: "desc" },
                         take: 10,
                         include: {
-                            author: { select: { id: true, name: true, image: true, role: true, impactXP: true } },
+                            author: { select: { id: true, name: true, username: true, image: true, role: true, impactXP: true } },
                         },
                     },
                 },
