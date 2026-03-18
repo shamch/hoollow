@@ -149,20 +149,8 @@ export default function LandingPage() {
               variants={fadeInUp}
             >
               <p className="text-small text-text-muted mb-6 uppercase tracking-wider font-semibold">
-                Used by builders from →
+                Used by top college students and professors
               </p>
-              <div className="flex items-center gap-10 overflow-x-auto pb-4">
-                {["IIT Delhi", "BITS Pilani", "NIT Trichy", "IIIT Hyderabad", "VIT Vellore", "DTU"].map(
-                  (name) => (
-                    <span
-                      key={name}
-                      className="text-lg font-semibold text-text-muted/50 whitespace-nowrap font-display"
-                    >
-                      {name}
-                    </span>
-                  )
-                )}
-              </div>
             </motion.div>
           </div>
         </motion.section>
