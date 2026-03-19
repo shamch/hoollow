@@ -17,10 +17,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
         const { searchParams } = new URL(req.url);
         const cursor = searchParams.get("cursor");
+        const channel = searchParams.get("channel") || "general";
         const take = 50;
 
         const messages = await prisma.clubMessage.findMany({
-            where: { clubId: params.id },
+            where: { clubId: params.id, channel },
             orderBy: { createdAt: "desc" },
             take,
             ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
@@ -51,12 +52,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         });
         if (!member) return NextResponse.json({ error: "Not a member" }, { status: 403 });
 
-        const { text } = await req.json();
+        const { text, channel = "general" } = await req.json();
         if (!text?.trim()) return NextResponse.json({ error: "Message text required" }, { status: 400 });
+
+        if (channel === "announcements") {
+            const roleLevelMap: Record<string, number> = { owner: 4, coowner: 3, moderator: 2, member: 1 };
+            if ((roleLevelMap[member.role] || 0) < 3) {
+                return NextResponse.json({ error: "Only owners and co-owners can post announcements" }, { status: 403 });
+            }
+        }
 
         const message = await prisma.clubMessage.create({
             data: {
                 text: text.trim(),
+                channel,
                 clubId: params.id,
                 authorId: session.user.id,
             },
@@ -64,6 +73,27 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 author: { select: { id: true, name: true, image: true, role: true } },
             },
         });
+
+        if (channel === "announcements" && text.includes("#important")) {
+            const club = await prisma.club.findUnique({
+                where: { id: params.id },
+                include: { members: true },
+            });
+            if (club) {
+                const notifications = club.members
+                    .filter((m) => m.userId !== session.user.id)
+                    .map((m) => ({
+                        type: "club_announcement",
+                        message: `[${club.name}] Important announcement: ${text.substring(0, 60)}${text.length > 60 ? "..." : ""}`,
+                        userId: m.userId,
+                        relatedId: club.id,
+                    }));
+                
+                if (notifications.length > 0) {
+                    await prisma.notification.createMany({ data: notifications });
+                }
+            }
+        }
 
         return NextResponse.json(message, { status: 201 });
     } catch (error) {

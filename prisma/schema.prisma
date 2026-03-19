@@ -50,6 +50,9 @@ model User {
   // Club join requests
   clubJoinRequests    ClubJoinRequest[]
   
+  // Club bans
+  clubBans            ClubBan[]
+  
   // XP History
   xpHistory           XPHistory[]
   
@@ -62,6 +65,8 @@ model User {
   scheduledDeletionDate DateTime?
   deleteOTP             String?
   deleteOTPExpires      DateTime?
+  clubTransferOTP       String?
+  clubTransferOTPExpires DateTime?
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -206,15 +211,29 @@ model Club {
   name        String       @unique
   description String       @db.Text
   type        String       @default("open") // open, invite, application
+  visibility  String       @default("public") // public, private
+  inviteCode  String?      @unique // auto-generated for private clubs
   domain      String       @default("Tech")
-  gradient    String       @default("linear-gradient(135deg, #667eea 0%, #764ba2 100%)")
+  gradient    String       @default("linear-gradient(to right, #4facfe 0%, #00f2fe 100%)")
+  banner      String?
+  logo        String?
+  themeColor  String       @default("#6366f1")
+  vibe        String       @default("professional")
   tags        Json         @default("[]")
+  permissions Json         @default("{\"coowner\":{\"kick\":true,\"ban\":true,\"timeout\":true,\"manageInvites\":true,\"editSettings\":true,\"postAnnouncements\":true},\"moderator\":{\"kick\":false,\"ban\":false,\"timeout\":true,\"manageInvites\":false,\"editSettings\":false,\"postAnnouncements\":false},\"member\":{\"kick\":false,\"ban\":false,\"timeout\":false,\"manageInvites\":false,\"editSettings\":false,\"postAnnouncements\":false}}")
   creatorId   String?      // Track the original creator
+  
+  // Deletion scheduling
+  scheduledDeletion  DateTime?
+  deleteOTP          String?
+  deleteOTPExpires   DateTime?
   
   members      ClubMember[]
   messages     ClubMessage[]
   invitations  ClubInvitation[]
   joinRequests ClubJoinRequest[]
+  inviteCodes  ClubInviteCode[]
+  bans         ClubBan[]
   
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -240,6 +259,7 @@ model ClubMember {
 model ClubMessage {
   id        String   @id @default(cuid())
   text      String   @db.Text
+  channel   String   @default("general") // general, announcements
   
   clubId    String
   club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
@@ -251,6 +271,40 @@ model ClubMessage {
 
   @@index([clubId])
   @@index([authorId])
+}
+
+model ClubInviteCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  label     String?
+  maxUses   Int       @default(0) // 0 = unlimited
+  uses      Int       @default(0)
+  
+  clubId    String
+  club      Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  @@index([clubId])
+}
+
+model ClubBan {
+  id        String    @id @default(cuid())
+  reason    String?
+  expiresAt DateTime? // null = permanent ban, non-null = timeout
+  
+  clubId    String
+  club      Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime  @default(now())
+
+  @@unique([clubId, userId])
+  @@index([clubId])
+  @@index([userId])
 }
 
 model CollabRequest {

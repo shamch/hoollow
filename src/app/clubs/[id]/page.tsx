@@ -1,85 +1,24 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    MessageCircle,
-    Users,
-    Settings,
-    Send,
-    Crown,
-    Shield,
-    Star,
-    User,
-    ChevronLeft,
-    MoreVertical,
-    LogOut,
-    X,
-    Check,
-    Trash2,
-    UserPlus,
-    Mail,
-    Search,
-} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageCircle, Users, Mail, Settings, Loader2 } from "lucide-react";
+
 import Navbar from "@/components/Navbar";
-import Avatar from "@/components/Avatar";
-import Button from "@/components/Button";
-
-interface ClubMember {
-    id: string;
-    role: string;
-    joinedAt: string;
-    user: { id: string; name: string; image: string; role: string; impactXP: number };
-}
-
-interface ClubDetail {
-    id: string;
-    name: string;
-    description: string;
-    type: string;
-    domain: string;
-    gradient: string;
-    tags: string[];
-    creatorId: string;
-    memberCount: number;
-    messageCount: number;
-    members: ClubMember[];
-    currentUserRole: string | null;
-    isMember: boolean;
-    createdAt: string;
-}
-
-interface ChatMessage {
-    id: string;
-    text: string;
-    createdAt: string;
-    author: { id: string; name: string; image: string; role: string };
-}
-
-const ROLE_ICON: Record<string, React.ReactNode> = {
-    owner: <Crown size={12} className="text-yellow-500" />,
-    coowner: <Shield size={12} className="text-purple-500" />,
-    manager: <Star size={12} className="text-blue-500" />,
-    member: <User size={12} className="text-text-muted" />,
-};
-
-const ROLE_LABEL: Record<string, string> = {
-    owner: "Owner",
-    coowner: "Co-Owner",
-    manager: "Manager",
-    member: "Member",
-};
-
-const ROLE_LEVEL: Record<string, number> = { owner: 4, coowner: 3, manager: 2, member: 1 };
-
-const ROLE_COLORS: Record<string, string> = {
-    owner: "bg-yellow-500/10 text-yellow-500",
-    coowner: "bg-purple-500/10 text-purple-500",
-    manager: "bg-blue-500/10 text-blue-500",
-    member: "bg-surface-alt text-text-secondary",
-};
+import ClubHeader from "@/components/clubs/ClubHeader";
+import ClubSidebar from "@/components/clubs/ClubSidebar";
+import ClubChat from "@/components/clubs/ClubChat";
+import ClubMembers from "@/components/clubs/ClubMembers";
+import ClubSettings from "@/components/clubs/ClubSettings";
+import { 
+    InviteModal, 
+    TransferModal, 
+    BanModal, 
+    DeleteModal 
+} from "@/components/clubs/ClubModals";
+import { ROLE_LEVEL } from "@/components/clubs/constants";
 
 export default function ClubDetailPage() {
     const params = useParams();
@@ -87,38 +26,67 @@ export default function ClubDetailPage() {
     const { data: session } = useSession();
     const clubId = params.id as string;
 
-    const [club, setClub] = useState<ClubDetail | null>(null);
+    const [club, setClub] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"chat" | "members" | "invitations" | "settings">("chat");
 
     // Chat state
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<any[]>([]);
     const [messageText, setMessageText] = useState("");
     const [sendingMessage, setSendingMessage] = useState(false);
-    const chatEndRef = useRef<HTMLDivElement>(null);
+    const [activeChannel, setActiveChannel] = useState<"general" | "announcements">("general");
     const pollRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Settings state
-    const [editName, setEditName] = useState("");
-    const [editDesc, setEditDesc] = useState("");
-    const [editType, setEditType] = useState("open");
-    const [editDomain, setEditDomain] = useState("Tech");
-    const [savingSettings, setSavingSettings] = useState(false);
-
-    // Member action state
+    // Modals state
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [showTransferModal, setShowTransferModal] = useState(false);
+    const [showBanModal, setShowBanModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    
+    // Transfer/Moderation state
+    const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+    const [transferOtp, setTransferOtp] = useState("");
+    const [transferring, setTransferring] = useState(false);
+    const [banTargetId, setBanTargetId] = useState<string | null>(null);
+    const [banAction, setBanAction] = useState<"ban" | "timeout">("ban");
+    const [banReason, setBanReason] = useState("");
+    const [timeoutHours, setTimeoutHours] = useState(1);
     const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
 
-    // Invite state
-    const [showInviteModal, setShowInviteModal] = useState(false);
+    // Settings / Edit state
+    const [editState, setEditState] = useState({
+        name: "",
+        description: "",
+        type: "open",
+        domain: "Tech",
+        banner: "",
+        logo: "",
+        themeColor: "#6366f1",
+        vibe: "professional",
+        permissions: null
+    });
+    const [savingSettings, setSavingSettings] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [uploadingBanner, setUploadingBanner] = useState(false);
+    const logoInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+
+    // Invitations / Requests state
     const [inviteSearch, setInviteSearch] = useState("");
-    const [searchResults, setSearchResults] = useState<{ id: string; name: string; image: string }[]>([]);
+    const [searchResults, setSearchResults] = useState<any[]>([]);
     const [inviting, setInviting] = useState(false);
     const [sentInvites, setSentInvites] = useState<any[]>([]);
     const [receivedInvites, setReceivedInvites] = useState<any[]>([]);
-
-    // Join request state
-    const [hasPendingRequest, setHasPendingRequest] = useState(false);
     const [joinRequests, setJoinRequests] = useState<any[]>([]);
+    const [hasPendingRequest, setHasPendingRequest] = useState(false);
+    const [inviteCodes, setInviteCodes] = useState<any[]>([]);
+
+    // Delete state
+    const [deleteOtp, setDeleteOtp] = useState("");
+    const [deleteOtpSent, setDeleteOtpSent] = useState(false);
+    const [deletingClub, setDeletingClub] = useState(false);
+
+    // ─── Data Fetching ───
 
     const fetchClub = useCallback(async () => {
         try {
@@ -126,124 +94,38 @@ export default function ClubDetailPage() {
             if (res.ok) {
                 const data = await res.json();
                 setClub(data);
-                setEditName(data.name);
-                setEditDesc(data.description);
-                setEditType(data.type);
-                setEditDomain(data.domain);
+                setEditState({
+                    name: data.name,
+                    description: data.description,
+                    type: data.type,
+                    domain: data.domain,
+                    banner: data.banner || "",
+                    logo: data.logo || "",
+                    themeColor: data.themeColor || "#6366f1",
+                    vibe: data.vibe || "professional",
+                    permissions: data.permissions
+                });
+                
+                // Check for pending join request
+                const reqRes = await fetch(`/api/clubs/${clubId}/join-requests`);
+                if (reqRes.ok) {
+                    const requests = await reqRes.json();
+                    setJoinRequests(requests);
+                    setHasPendingRequest(requests.some((r: any) => r.userId === session?.user?.id && r.status === "pending"));
+                }
             } else {
                 router.push("/clubs");
             }
-        } catch {
-            router.push("/clubs");
-        } finally {
-            setLoading(false);
-        }
-    }, [clubId, router]);
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    }, [clubId, router, session?.user?.id]);
 
     const fetchMessages = useCallback(async () => {
-        if (!club?.isMember) return;
         try {
-            const res = await fetch(`/api/clubs/${clubId}/messages`);
-            if (res.ok) {
-                const data = await res.json();
-                setMessages(data.messages || []);
-            }
+            const res = await fetch(`/api/clubs/${clubId}/messages?channel=${activeChannel}`);
+            if (res.ok) setMessages(await res.json());
         } catch (e) { console.error(e); }
-    }, [clubId, club?.isMember]);
-
-    useEffect(() => {
-        fetchClub();
-    }, [fetchClub]);
-
-    useEffect(() => {
-        if (club?.isMember && activeTab === "chat") {
-            fetchMessages();
-            // Poll every 3 seconds for new messages
-            pollRef.current = setInterval(fetchMessages, 3000);
-            return () => { if (pollRef.current) clearInterval(pollRef.current); };
-        }
-        return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    }, [club?.isMember, activeTab, fetchMessages]);
-
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-
-    const handleSendMessage = async () => {
-        if (!messageText.trim()) return;
-        setSendingMessage(true);
-        try {
-            const res = await fetch(`/api/clubs/${clubId}/messages`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: messageText }),
-            });
-            if (res.ok) {
-                const msg = await res.json();
-                setMessages((prev) => [...prev, msg]);
-                setMessageText("");
-            }
-        } catch (e) { console.error(e); }
-        finally { setSendingMessage(false); }
-    };
-
-    const handleJoinLeave = async () => {
-        try {
-            const res = await fetch(`/api/clubs/${clubId}/join`, { method: "POST" });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.requested) {
-                    setHasPendingRequest(true);
-                } else {
-                    fetchClub();
-                    setHasPendingRequest(false);
-                }
-            } else if (res.status === 409) {
-                setHasPendingRequest(true);
-            }
-        } catch (e) { console.error(e); }
-    };
-
-    const handleChangeRole = async (memberId: string, newRole: string) => {
-        try {
-            await fetch(`/api/clubs/${clubId}/members`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ memberId, newRole }),
-            });
-            fetchClub();
-            setActiveMemberId(null);
-        } catch (e) { console.error(e); }
-    };
-
-    const handleKick = async (memberId: string) => {
-        try {
-            await fetch(`/api/clubs/${clubId}/members?memberId=${memberId}`, { method: "DELETE" });
-            fetchClub();
-            setActiveMemberId(null);
-        } catch (e) { console.error(e); }
-    };
-
-    const handleSaveSettings = async () => {
-        setSavingSettings(true);
-        try {
-            await fetch(`/api/clubs/${clubId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: editName, description: editDesc, type: editType, domain: editDomain }),
-            });
-            fetchClub();
-        } catch (e) { console.error(e); }
-        finally { setSavingSettings(false); }
-    };
-
-    const handleDeleteClub = async () => {
-        if (!confirm("Are you sure you want to delete this club? This cannot be undone.")) return;
-        try {
-            await fetch(`/api/clubs/${clubId}`, { method: "DELETE" });
-            router.push("/clubs");
-        } catch (e) { console.error(e); }
-    };
+    }, [clubId, activeChannel]);
 
     const fetchInvitations = useCallback(async () => {
         try {
@@ -256,30 +138,50 @@ export default function ClubDetailPage() {
         } catch (e) { console.error(e); }
     }, [clubId]);
 
-    useEffect(() => {
-        if (club?.isMember) fetchInvitations();
-    }, [club?.isMember, fetchInvitations]);
-
-    const fetchJoinRequests = useCallback(async () => {
+    const fetchInviteCodes = useCallback(async () => {
         try {
-            const res = await fetch(`/api/clubs/${clubId}/join-requests`);
-            if (res.ok) setJoinRequests(await res.json());
+            const res = await fetch(`/api/clubs/${clubId}/invite-codes`);
+            if (res.ok) setInviteCodes(await res.json());
         } catch (e) { console.error(e); }
     }, [clubId]);
 
     useEffect(() => {
-        if (club?.isMember && canManageMembers) fetchJoinRequests();
-    }, [club?.isMember, fetchJoinRequests]);
+        fetchClub();
+        fetchInvitations();
+        fetchInviteCodes();
+    }, [fetchClub, fetchInvitations, fetchInviteCodes]);
 
-    const handleRespondJoinRequest = async (requestId: string, status: string) => {
+    useEffect(() => {
+        if (club?.isMember) {
+            fetchMessages();
+            pollRef.current = setInterval(fetchMessages, 3000);
+        }
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, [club?.isMember, fetchMessages]);
+
+    // ─── Handlers ───
+
+    const handleSendMessage = async () => {
+        if (!messageText.trim() || sendingMessage) return;
+        setSendingMessage(true);
         try {
-            await fetch(`/api/clubs/${clubId}/join-requests`, {
-                method: "PATCH",
+            const res = await fetch(`/api/clubs/${clubId}/messages`, {
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ requestId, status }),
+                body: JSON.stringify({ text: messageText, channel: activeChannel }),
             });
-            fetchJoinRequests();
-            if (status === "accepted") fetchClub();
+            if (res.ok) {
+                setMessageText("");
+                fetchMessages();
+            }
+        } catch (e) { console.error(e); }
+        finally { setSendingMessage(false); }
+    };
+
+    const handleJoinLeave = async () => {
+        try {
+            const res = await fetch(`/api/clubs/${clubId}/join`, { method: "POST" });
+            if (res.ok) fetchClub();
         } catch (e) { console.error(e); }
     };
 
@@ -304,32 +206,184 @@ export default function ClubDetailPage() {
                 fetchInvitations();
                 setShowInviteModal(false);
                 setInviteSearch("");
-                setSearchResults([]);
             }
         } catch (e) { console.error(e); }
         finally { setInviting(false); }
     };
 
-    const handleRespondInvite = async (invitationId: string, status: string) => {
+    const handleMemberAction = async (action: string, memberId: string, data?: any) => {
+        setActiveMemberId(null);
         try {
-            await fetch(`/api/clubs/${clubId}/invitations`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ invitationId, status }),
-            });
-            fetchInvitations();
-            if (status === "accepted") fetchClub();
+            if (action === "changeRole") {
+                await fetch(`/api/clubs/${clubId}/members/${memberId}/role`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ role: data.newRole }),
+                });
+                fetchClub();
+            } else if (action === "kick") {
+                await fetch(`/api/clubs/${clubId}/members/${memberId}`, { method: "DELETE" });
+                fetchClub();
+            } else if (action === "transfer") {
+                setTransferTargetId(memberId);
+                setShowTransferModal(true);
+            } else if (action === "ban") {
+                setBanTargetId(memberId);
+                setBanAction("ban");
+                setShowBanModal(true);
+            }
         } catch (e) { console.error(e); }
     };
 
+    const handleConfirmTransfer = async () => {
+        if (!transferTargetId || !transferOtp) return;
+        setTransferring(true);
+        try {
+            const res = await fetch(`/api/clubs/${clubId}/transfer-ownership`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ toMemberId: transferTargetId, otp: transferOtp }),
+            });
+            if (res.ok) {
+                setShowTransferModal(false);
+                setTransferOtp("");
+                fetchClub();
+            }
+        } catch (e) { console.error(e); }
+        finally { setTransferring(false); }
+    };
+
+    const handleConfirmBan = async () => {
+        if (!banTargetId) return;
+        try {
+            await fetch(`/api/clubs/${clubId}/moderation`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    targetMemberId: banTargetId, 
+                    action: banAction, 
+                    reason: banReason, 
+                    hours: timeoutHours 
+                }),
+            });
+            setShowBanModal(false);
+            setBanReason("");
+            fetchClub();
+        } catch (e) { console.error(e); }
+    };
+
+    const handleSaveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            const res = await fetch(`/api/clubs/${clubId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: editState.name,
+                    description: editState.description,
+                    type: editState.type,
+                    domain: editState.domain,
+                    themeColor: editState.themeColor,
+                    vibe: editState.vibe,
+                    banner: editState.banner,
+                    logo: editState.logo,
+                    permissions: editState.permissions
+                }),
+            });
+            if (res.ok) fetchClub();
+        } catch (e) { console.error(e); }
+        finally { setSavingSettings(false); }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "logo" | "banner") => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const setUploading = type === "logo" ? setUploadingLogo : setUploadingBanner;
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("type", type);
+            const res = await fetch(`/api/clubs/${clubId}/upload`, { method: "POST", body: formData });
+            if (res.ok) {
+                const { url } = await res.json();
+                setEditState(prev => ({ ...prev, [type]: url }));
+            }
+        } catch (e) { console.error(e); }
+        finally { setUploading(false); }
+    };
+
+    const handlePermissionChange = (role: string, perm: string, value: boolean) => {
+        const newPerms = JSON.parse(JSON.stringify(editState.permissions || club.permissions || {}));
+        if (!newPerms[role]) newPerms[role] = {};
+        newPerms[role][perm] = value;
+        setEditState(prev => ({ ...prev, permissions: newPerms }));
+    };
+
+    const handleRegenerateMainCode = async () => {
+        try {
+            const res = await fetch(`/api/clubs/${clubId}/invite-codes`, { method: "PATCH" });
+            if (res.ok) fetchClub();
+        } catch (e) { console.error(e); }
+    };
+
+    const handleGenerateInviteCode = async () => {
+        try {
+            const res = await fetch(`/api/clubs/${clubId}/invite-codes`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ label: "Special Invite", maxUses: 0 }),
+            });
+            if (res.ok) fetchInviteCodes();
+        } catch (e) { console.error(e); }
+    };
+
+    const handleRevokeCode = async (id: string) => {
+        try {
+            await fetch(`/api/clubs/${clubId}/invite-codes?codeId=${id}`, { method: "DELETE" });
+            fetchInviteCodes();
+        } catch (e) { console.error(e); }
+    };
+
+    const handleSendDeleteOtp = async () => {
+        try {
+            const res = await fetch(`/api/clubs/${clubId}/delete`, { method: "POST" });
+            if (res.ok) setDeleteOtpSent(true);
+        } catch (e) { console.error(e); }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deleteOtp) return;
+        setDeletingClub(true);
+        try {
+            const res = await fetch(`/api/clubs/${clubId}/delete`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ otp: deleteOtp }),
+            });
+            if (res.ok) {
+                setShowDeleteModal(false);
+                fetchClub(); // Will show scheduled deletion status
+            }
+        } catch (e) { console.error(e); }
+        finally { setDeletingClub(false); }
+    };
+
+    // Expose delete modal trigger to window for the settings component
+    useEffect(() => {
+        (window as any).triggerDeleteModal = () => setShowDeleteModal(true);
+        return () => { delete (window as any).triggerDeleteModal; };
+    }, []);
+
+    // ─── Render ───
+
     if (loading) {
         return (
-            <>
-                <Navbar />
-                <div className="min-h-screen bg-background flex items-center justify-center">
-                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full" />
-                </div>
-            </>
+            <div className="min-h-screen bg-[#0c0c0e] flex items-center justify-center">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                    <Loader2 size={40} className="text-accent" />
+                </motion.div>
+            </div>
         );
     }
 
@@ -337,424 +391,158 @@ export default function ClubDetailPage() {
 
     const myRole = club.currentUserRole;
     const myLevel = myRole ? ROLE_LEVEL[myRole] || 0 : 0;
-    const canManageMembers = myLevel >= ROLE_LEVEL.manager;
-    const canEditSettings = myLevel >= ROLE_LEVEL.coowner;
     const isOwner = myRole === "owner";
+    const canManageMembers = myLevel >= 2; // Moderator+
+    const canEditSettings = myLevel >= 3; // Co-owner+
 
     const tabs = [
-        { key: "chat" as const, label: "Chat", icon: <MessageCircle size={16} />, count: club.messageCount },
-        { key: "members" as const, label: "Members", icon: <Users size={16} />, count: club.memberCount },
-        ...(canManageMembers ? [{ key: "invitations" as const, label: "Invitations", icon: <Mail size={16} />, count: sentInvites.filter((i: any) => i.status === "pending").length + receivedInvites.length }] : []),
-        ...(canEditSettings ? [{ key: "settings" as const, label: "Settings", icon: <Settings size={16} /> }] : []),
+        { key: "chat", label: "Hub", icon: <MessageCircle size={16} />, count: club.messageCount },
+        { key: "members", label: "Tribe", icon: <Users size={16} />, count: club.memberCount },
+        ...(canManageMembers ? [{ key: "invitations", label: "Recruits", icon: <Mail size={16} />, count: receivedInvites.length }] : []),
+        ...(canEditSettings ? [{ key: "settings", label: "Engine", icon: <Settings size={16} /> }] : []),
     ];
 
     return (
-        <>
+        <div className="h-screen bg-[#0c0c0e] flex flex-col overflow-hidden">
             <Navbar />
-            <main className="min-h-screen bg-background">
-                {/* Hero header */}
-                <div className="relative" style={{ background: club.gradient }}>
-                    <div className="max-w-5xl mx-auto px-4 pt-24 pb-8">
-                        <button onClick={() => router.push("/clubs")} className="inline-flex items-center gap-1 text-white/80 hover:text-text-primary text-small mb-4 transition-colors">
-                            <ChevronLeft size={16} /> Back to Clubs
-                        </button>
-                        <div className="flex items-end justify-between">
-                            <div>
-                                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{club.name}</h1>
-                                <p className="text-white/80 text-body max-w-xl">{club.description}</p>
-                                <div className="flex items-center gap-3 mt-3">
-                                    <span className="text-white/70 text-small">{club.memberCount} members</span>
-                                    <span className="text-white/40">•</span>
-                                    <span className="text-white/70 text-small capitalize">{club.type} club</span>
-                                    <span className="text-white/40">•</span>
-                                    <span className="text-white/70 text-small">{club.domain}</span>
-                                    {myRole && (
-                                        <>
-                                            <span className="text-white/40">•</span>
-                                            <span className="inline-flex items-center gap-1 text-white text-small font-medium">
-                                                {ROLE_ICON[myRole]} {ROLE_LABEL[myRole]}
-                                            </span>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                {!club.isMember ? (
-                                    hasPendingRequest ? (
-                                        <span className="px-6 py-2.5 bg-surface-alt/20 text-text-primary rounded-pill font-semibold text-small backdrop-blur-sm">
-                                            Request Pending
-                                        </span>
-                                    ) : (
-                                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleJoinLeave} className="px-6 py-2.5 bg-accent text-accent-inverse rounded-pill font-semibold text-small hover:bg-accent-hover transition-colors shadow-lg">
-                                            {club.type === "open" ? "Join Club" : "Request to Join"}
-                                        </motion.button>
-                                    )
-                                ) : !isOwner ? (
-                                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleJoinLeave} className="px-6 py-2.5 bg-surface-alt/50 text-text-primary rounded-pill font-semibold text-small hover:bg-surface-alt transition-colors backdrop-blur-sm flex items-center gap-2">
-                                        <LogOut size={14} /> Leave
-                                    </motion.button>
-                                ) : null}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            
+            <div className="flex-1 flex overflow-hidden">
+                {club.isMember ? (
+                    <>
+                        <ClubSidebar 
+                            club={{ ...club, tabs }}
+                            activeTab={activeTab}
+                            onTabChange={(t) => setActiveTab(t)}
+                            activeChannel={activeChannel}
+                            onChannelChange={(c) => setActiveChannel(c)}
+                            myRole={myRole}
+                        />
 
-                {!club.isMember ? (
-                    <div className="max-w-5xl mx-auto px-4 py-16 text-center">
-                        <div className="w-20 h-20 mx-auto mb-6 bg-surface-alt rounded-full flex items-center justify-center">
-                            <Users size={32} className="text-text-muted" />
-                        </div>
-                        <h2 className="text-xl font-semibold text-text-primary mb-2">Join to participate</h2>
-                        <p className="text-text-muted mb-6">Join this club to access the group chat, see members, and collaborate.</p>
-                        {hasPendingRequest ? (
-                            <span className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-alt text-text-muted rounded-pill font-semibold text-small">
-                                ✓ Request Pending
-                            </span>
-                        ) : (
-                            <Button variant="primary" onClick={handleJoinLeave}>
-                                {club.type === "open" ? "Join Club" : "Request to Join"}
-                            </Button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="max-w-5xl mx-auto px-4 py-6">
-                        {/* Tabs */}
-                        <div className="flex items-center gap-1 mb-6 border-b border-border">
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab.key}
-                                    onClick={() => setActiveTab(tab.key)}
-                                    className={`relative flex items-center gap-2 px-4 py-3 text-small font-medium transition-colors ${activeTab === tab.key ? "text-text-primary" : "text-text-muted hover:text-text-secondary"}`}
-                                >
-                                    {tab.icon}
-                                    {tab.label}
-                                    {tab.count !== undefined && (
-                                        <span className="text-label bg-surface-alt px-1.5 py-0.5 rounded-pill">{tab.count}</span>
-                                    )}
-                                    {activeTab === tab.key && (
-                                        <motion.span layoutId="clubTab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-text-primary rounded-full" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* ─── Chat Tab ─── */}
-                        <AnimatePresence mode="wait">
+                        <main className="flex-1 flex flex-col overflow-hidden relative">
                             {activeTab === "chat" && (
-                                <motion.div key="chat" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="bg-surface border border-border rounded-card overflow-hidden" style={{ height: "calc(100vh - 350px)", minHeight: "400px" }}>
-                                    <div className="flex flex-col h-full">
-                                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                                            {messages.length === 0 ? (
-                                                <div className="flex-1 flex items-center justify-center h-full">
-                                                    <div className="text-center">
-                                                        <MessageCircle size={40} className="text-text-muted mx-auto mb-3 opacity-30" />
-                                                        <p className="text-text-muted text-small">No messages yet. Start the conversation!</p>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                messages.map((msg, i) => {
-                                                    const isMe = msg.author.id === session?.user?.id;
-                                                    const showAvatar = i === 0 || messages[i - 1].author.id !== msg.author.id;
-                                                    return (
-                                                        <motion.div
-                                                            key={msg.id}
-                                                            initial={{ opacity: 0, y: 5 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            className={`flex gap-2.5 ${isMe ? "flex-row-reverse" : ""}`}
-                                                        >
-                                                            {showAvatar ? (
-                                                                <Avatar name={msg.author.name} image={msg.author.image} size="sm" />
-                                                            ) : (
-                                                                <div className="w-8" />
-                                                            )}
-                                                            <div className={`max-w-[70%] ${isMe ? "items-end" : "items-start"}`}>
-                                                                {showAvatar && (
-                                                                    <p className={`text-label font-medium mb-0.5 ${isMe ? "text-right" : ""} text-text-primary`}>
-                                                                        {msg.author.name}
-                                                                    </p>
-                                                                )}
-                                                                <div className={`px-3.5 py-2.5 rounded-2xl text-small ${isMe
-                                                                    ? "bg-accent text-accent-inverse rounded-br-md"
-                                                                    : "bg-surface-alt text-text-primary rounded-bl-md"
-                                                                    }`}>
-                                                                    {msg.text}
-                                                                </div>
-                                                                <p className={`text-[10px] text-text-muted mt-0.5 ${isMe ? "text-right" : ""}`}>
-                                                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                                </p>
-                                                            </div>
-                                                        </motion.div>
-                                                    );
-                                                })
-                                            )}
-                                            <div ref={chatEndRef} />
-                                        </div>
-                                        <div className="p-3 border-t border-border bg-surface">
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={messageText}
-                                                    onChange={(e) => setMessageText(e.target.value)}
-                                                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                                                    placeholder="Type a message..."
-                                                    className="flex-1 px-4 py-2.5 bg-surface-alt border border-border rounded-pill text-small text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
-                                                />
-                                                <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    onClick={handleSendMessage}
-                                                    disabled={!messageText.trim() || sendingMessage}
-                                                    className="w-10 h-10 bg-accent text-accent-inverse rounded-full flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50"
-                                                >
-                                                    <Send size={16} />
-                                                </motion.button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
+                                <ClubChat 
+                                    messages={messages}
+                                    messageText={messageText}
+                                    onMessageChange={setMessageText}
+                                    onSendMessage={handleSendMessage}
+                                    sending={sendingMessage}
+                                    channel={activeChannel}
+                                    currentUserId={session?.user?.id}
+                                />
                             )}
 
-                            {/* ─── Members Tab ─── */}
                             {activeTab === "members" && (
-                                <motion.div key="members" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                                    <div className="space-y-2">
-                                        {club.members.map((m) => {
-                                            const memberLevel = ROLE_LEVEL[m.role] || 0;
-                                            const canActOn = canManageMembers && memberLevel < myLevel && m.user.id !== session?.user?.id;
-
-                                            return (
-                                                <motion.div
-                                                    key={m.id}
-                                                    layout
-                                                    className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card hover:shadow-card-hover transition-all"
-                                                >
-                                                    <Avatar name={m.user.name} image={m.user.image} size="md" />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-small font-semibold text-text-primary truncate">{m.user.name}</p>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-pill ${ROLE_COLORS[m.role] || "bg-surface-alt text-text-secondary"}`}>
-                                                                {ROLE_ICON[m.role]} {ROLE_LABEL[m.role] || m.role}
-                                                            </span>
-                                                            <span className="text-label text-text-muted">{m.user.impactXP} XP</span>
-                                                        </div>
-                                                    </div>
-                                                    {canActOn && (
-                                                        <div className="relative">
-                                                            <button onClick={() => setActiveMemberId(activeMemberId === m.id ? null : m.id)} className="p-2 rounded-btn text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors">
-                                                                <MoreVertical size={16} />
-                                                            </button>
-                                                            <AnimatePresence>
-                                                                {activeMemberId === m.id && (
-                                                                    <motion.div
-                                                                        initial={{ opacity: 0, y: -5, scale: 0.95 }}
-                                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                                        exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                                                                        className="absolute right-0 top-10 w-44 bg-surface border border-border rounded-card shadow-card-hover py-1 z-20"
-                                                                    >
-                                                                        <p className="px-3 py-1.5 text-label text-text-muted font-medium uppercase tracking-wider">Change Role</p>
-                                                                        {Object.entries(ROLE_LABEL)
-                                                                            .filter(([role]) => ROLE_LEVEL[role] < myLevel && role !== m.role)
-                                                                            .map(([role, label]) => (
-                                                                                <button key={role} onClick={() => handleChangeRole(m.id, role)} className="w-full text-left px-3 py-2 text-small text-text-secondary hover:bg-surface-alt flex items-center gap-2 transition-colors">
-                                                                                    {ROLE_ICON[role]} {label}
-                                                                                </button>
-                                                                            ))
-                                                                        }
-                                                                        <div className="border-t border-border my-1" />
-                                                                        <button onClick={() => handleKick(m.id)} className="w-full text-left px-3 py-2 text-small text-red-500 hover:bg-red-50 flex items-center gap-2 transition-colors">
-                                                                            <Trash2 size={14} /> Kick
-                                                                        </button>
-                                                                    </motion.div>
-                                                                )}
-                                                            </AnimatePresence>
-                                                        </div>
-                                                    )}
-                                                </motion.div>
-                                            );
-                                        })}
-                                    </div>
-                                </motion.div>
+                                <ClubMembers 
+                                    members={club.members}
+                                    myRole={myRole}
+                                    myLevel={myLevel}
+                                    canManageMembers={canManageMembers}
+                                    activeMemberId={activeMemberId}
+                                    setActiveMemberId={setActiveMemberId}
+                                    currentUserId={session?.user?.id}
+                                    onAction={handleMemberAction}
+                                />
                             )}
 
-                            {/* ─── Invitations Tab ─── */}
-                            {activeTab === "invitations" && canManageMembers && (
-                                <motion.div key="invitations" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                                    {/* Invite User Button */}
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-semibold text-text-primary">Club Invitations</h3>
-                                        <motion.button
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={() => setShowInviteModal(true)}
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-accent-inverse rounded-btn font-medium text-small hover:bg-accent-hover transition-colors"
-                                        >
-                                            <UserPlus size={14} /> Invite User
-                                        </motion.button>
-                                    </div>
-
-                                    {/* Received Invitations */}
-                                    {receivedInvites.length > 0 && (
-                                        <div className="mb-6">
-                                            <h4 className="text-small font-medium text-text-muted uppercase tracking-wider mb-2">Received</h4>
-                                            <div className="space-y-2">
-                                                {receivedInvites.map((inv: any) => (
-                                                    <div key={inv.id} className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card">
-                                                        <Avatar name={inv.fromUser.name} image={inv.fromUser.image} size="sm" />
-                                                        <div className="flex-1">
-                                                            <p className="text-small text-text-primary"><strong>{inv.fromUser.username ? `@${inv.fromUser.username}` : inv.fromUser.name}</strong> invited you to join <strong>{inv.club?.name}</strong></p>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button onClick={() => handleRespondInvite(inv.id, "accepted")} className="p-1.5 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors"><Check size={14} /></button>
-                                                            <button onClick={() => handleRespondInvite(inv.id, "rejected")} className="p-1.5 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"><X size={14} /></button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Sent Invitations */}
-                                    <div>
-                                        <h4 className="text-small font-medium text-text-muted uppercase tracking-wider mb-2">Sent</h4>
-                                        {sentInvites.length === 0 ? (
-                                            <div className="text-center py-8 bg-surface border border-border rounded-card">
-                                                <Mail size={32} className="text-text-muted mx-auto mb-2 opacity-30" />
-                                                <p className="text-small text-text-muted">No invitations sent yet</p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                {sentInvites.map((inv: any) => (
-                                                    <div key={inv.id} className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card">
-                                                        <Avatar name={inv.toUser.name} image={inv.toUser.image} size="sm" />
-                                                        <div className="flex-1">
-                                                            <p className="text-small font-medium text-text-primary">{inv.toUser.username ? `@${inv.toUser.username}` : inv.toUser.name}</p>
-                                                        </div>
-                                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-pill ${inv.status === "pending" ? "bg-yellow-100 text-yellow-700"
-                                                            : inv.status === "accepted" ? "bg-green-100 text-green-700"
-                                                                : "bg-red-100 text-red-700"
-                                                            }`}>{inv.status}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
+                            {activeTab === "settings" && (
+                                <ClubSettings 
+                                    club={{ ...club, inviteCodes }}
+                                    editState={editState}
+                                    setEditState={setEditState}
+                                    saving={savingSettings}
+                                    onSave={handleSaveSettings}
+                                    onImageUpload={handleImageUpload}
+                                    onRegenerateCode={handleRegenerateMainCode}
+                                    onGenerateNewCode={handleGenerateInviteCode}
+                                    onRevokeCode={handleRevokeCode}
+                                    onPermissionChange={handlePermissionChange}
+                                    isOwner={isOwner}
+                                    uploadingLogo={uploadingLogo}
+                                    uploadingBanner={uploadingBanner}
+                                    logoInputRef={logoInputRef}
+                                    bannerInputRef={bannerInputRef}
+                                />
                             )}
-
-                            {/* ─── Join Requests (inside Invitations tab) ─── */}
-                            {activeTab === "invitations" && canManageMembers && joinRequests.filter((r: any) => r.status === "pending").length > 0 && (
-                                <motion.div key="joinrequests" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
-                                    <h4 className="text-small font-medium text-text-muted uppercase tracking-wider mb-2">Join Requests</h4>
-                                    <div className="space-y-2">
-                                        {joinRequests.filter((r: any) => r.status === "pending").map((jr: any) => (
-                                            <div key={jr.id} className="flex items-center gap-3 p-3 bg-surface border border-border rounded-card">
-                                                <Avatar name={jr.user.name} image={jr.user.image} size="sm" />
-                                                <div className="flex-1">
-                                                    <p className="text-small font-medium text-text-primary">{jr.user.name}</p>
-                                                    <p className="text-label text-text-muted">{jr.user.impactXP} XP · {jr.user.role}</p>
-                                                    {jr.message && <p className="text-label text-text-secondary mt-1">{jr.message}</p>}
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => handleRespondJoinRequest(jr.id, "accepted")} className="p-1.5 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors"><Check size={14} /></button>
-                                                    <button onClick={() => handleRespondJoinRequest(jr.id, "rejected")} className="p-1.5 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors"><X size={14} /></button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* ─── Settings Tab ─── */}
-                            {activeTab === "settings" && canEditSettings && (
-                                <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-lg">
-                                    <div className="bg-surface border border-border rounded-card p-6 space-y-5">
-                                        <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2"><Settings size={18} /> Club Settings</h3>
-                                        <div>
-                                            <label className="text-small font-medium text-text-primary block mb-1.5">Name</label>
-                                            <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary focus:outline-none focus:border-accent transition-all" />
-                                        </div>
-                                        <div>
-                                            <label className="text-small font-medium text-text-primary block mb-1.5">Description</label>
-                                            <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary focus:outline-none focus:border-accent transition-all resize-none" />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-small font-medium text-text-primary block mb-1.5">Type</label>
-                                                <select value={editType} onChange={(e) => setEditType(e.target.value)} className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary focus:outline-none focus:border-accent transition-all">
-                                                    <option value="open">Open</option>
-                                                    <option value="invite">Invite Only</option>
-                                                    <option value="application">Application</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="text-small font-medium text-text-primary block mb-1.5">Domain</label>
-                                                <select value={editDomain} onChange={(e) => setEditDomain(e.target.value)} className="w-full px-4 py-3 bg-surface border border-border rounded-input text-body text-text-primary focus:outline-none focus:border-accent transition-all">
-                                                    <option value="Tech">Tech</option>
-                                                    <option value="Design">Design</option>
-                                                    <option value="Business">Business</option>
-                                                    <option value="Research">Research</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between pt-2">
-                                            {isOwner && (
-                                                <button onClick={handleDeleteClub} className="px-4 py-2 text-red-500 hover:bg-red-50 rounded-btn text-small font-medium flex items-center gap-2 transition-colors">
-                                                    <Trash2 size={14} /> Delete Club
-                                                </button>
-                                            )}
-                                            <div className="flex gap-3 ml-auto">
-                                                <Button variant="primary" onClick={handleSaveSettings} disabled={savingSettings}>{savingSettings ? "Saving..." : "Save Changes"}</Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                            
+                            {/* Visual background element */}
+                            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                        </main>
+                    </>
+                ) : (
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        <ClubHeader 
+                            club={club}
+                            isMember={false}
+                            hasPendingRequest={hasPendingRequest}
+                            onJoinLeave={handleJoinLeave}
+                        />
+                        
+                        <div className="max-w-4xl mx-auto px-6 py-20 text-center space-y-8">
+                            <div className="w-24 h-24 mx-auto rounded-[40px] bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 shadow-2xl">
+                                <Users size={48} />
+                            </div>
+                            <div className="space-y-4">
+                                <h2 className="text-4xl font-black text-white tracking-tight">Access Restricted</h2>
+                                <p className="text-zinc-500 max-w-lg mx-auto font-medium leading-relaxed">
+                                    Join this community to access the secure communication hub, collaborate with builders, and participate in exclusive events.
+                                </p>
+                            </div>
+                            <div className="pt-4">
+                                <Button 
+                                    variant="primary" 
+                                    onClick={handleJoinLeave}
+                                    className="px-12 py-5 rounded-full text-lg shadow-[0_0_50px_rgba(var(--accent-rgb),0.2)]"
+                                >
+                                    {club.type === "open" ? "Entry Granted - Join Now" : "Request Community Access"}
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )}
-            </main>
+            </div>
 
-            {/* Invite User Modal */}
-            <AnimatePresence>
-                {showInviteModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowInviteModal(false)}>
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-surface rounded-card p-6 max-w-md w-full shadow-modal" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="font-display text-xl font-semibold text-text-primary flex items-center gap-2"><UserPlus size={18} /> Invite User</h2>
-                                <button onClick={() => setShowInviteModal(false)} className="text-text-muted hover:text-text-primary"><X size={20} /></button>
-                            </div>
-                            <div className="relative mb-4">
-                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                                <input
-                                    type="text"
-                                    value={inviteSearch}
-                                    onChange={(e) => handleSearchUsers(e.target.value)}
-                                    placeholder="Search by name..."
-                                    className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded-input text-small text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
-                                    autoFocus
-                                />
-                            </div>
-                            <div className="space-y-1 max-h-60 overflow-y-auto">
-                                {searchResults.length === 0 && inviteSearch.length >= 2 && (
-                                    <p className="text-center py-4 text-small text-text-muted">No users found</p>
-                                )}
-                                {searchResults.map((u) => (
-                                    <button
-                                        key={u.id}
-                                        onClick={() => handleInviteUser(u.id)}
-                                        disabled={inviting}
-                                        className="w-full flex items-center gap-3 p-3 rounded-card hover:bg-surface-alt transition-colors text-left"
-                                    >
-                                        <Avatar name={u.name} image={u.image} size="sm" />
-                                        <span className="text-small font-medium text-text-primary flex-1">{u.name}</span>
-                                        <span className="text-label text-accent font-semibold">Invite</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </>
+            {/* Modals */}
+            <InviteModal 
+                isOpen={showInviteModal}
+                onClose={() => setShowInviteModal(false)}
+                search={inviteSearch}
+                onSearch={handleSearchUsers}
+                results={searchResults}
+                onInvite={handleInviteUser}
+                inviting={inviting}
+            />
+            
+            <TransferModal 
+                isOpen={showTransferModal}
+                onClose={() => setShowTransferModal(false)}
+                targetMember={club?.members.find((m: any) => m.id === transferTargetId)}
+                otp={transferOtp}
+                onOtpChange={setTransferOtp}
+                onTransfer={handleConfirmTransfer}
+                transferring={transferring}
+            />
+
+            <BanModal 
+                isOpen={showBanModal}
+                onClose={() => setShowBanModal(false)}
+                action={banAction}
+                reason={banReason}
+                onReasonChange={setBanReason}
+                timeoutHours={timeoutHours}
+                onTimeoutChange={setTimeoutHours}
+                onConfirm={handleConfirmBan}
+            />
+
+            <DeleteModal 
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                otp={deleteOtp}
+                onOtpChange={setDeleteOtp}
+                onConfirm={handleConfirmDelete}
+                deleting={deletingClub}
+                otpSent={deleteOtpSent}
+                onSendOtp={handleSendDeleteOtp}
+            />
+        </div>
     );
 }

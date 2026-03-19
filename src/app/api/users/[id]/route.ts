@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
     try {
+        const session = await getServerSession(authOptions);
+        const visitorId = session?.user?.id;
+
+        // Fetch visitor's club IDs for membership check
+        let visitorClubIds: string[] = [];
+        if (visitorId) {
+            const visitorMemberships = await prisma.clubMember.findMany({
+                where: { userId: visitorId },
+                select: { clubId: true }
+            });
+            visitorClubIds = visitorMemberships.map(m => m.clubId);
+        }
+
         // First try with clubMembers (if schema has been pushed)
-        let user;
+        let user: any;
         try {
             user = await prisma.user.findFirst({
                 where: {
@@ -88,12 +103,22 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 },
             });
             if (user) {
-                (user as any).clubMembers = [];
+                user.clubMembers = [];
             }
         }
 
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
+        // Privacy Filtering: Only show public clubs OR clubs where the visitor is a member/owner
+        if (user.clubMembers && user.clubMembers.length > 0) {
+            const isOwner = visitorId === user.id;
+            user.clubMembers = user.clubMembers.filter((cm: any) => {
+                const isPublic = cm.club.visibility === "public";
+                const isMemberOfThisClub = visitorClubIds.includes(cm.club.id);
+                return isPublic || isOwner || isMemberOfThisClub;
+            });
         }
 
         return NextResponse.json(user);
