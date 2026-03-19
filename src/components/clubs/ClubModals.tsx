@@ -46,7 +46,7 @@ const BaseModal = ({ isOpen, onClose, title, description, children }: ModalProps
 );
 
 export const InviteModal = ({ 
-    isOpen, onClose, search, onSearch, results, onInvite, inviting 
+    isOpen, onClose, search, onSearch, results = [], onInvite, inviting 
 }: any) => (
     <BaseModal isOpen={isOpen} onClose={onClose} title="Invite Builders" description="Expand your tribe">
         <div className="space-y-6">

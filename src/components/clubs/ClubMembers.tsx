@@ -29,7 +29,7 @@ interface ClubMembersProps {
 }
 
 export default function ClubMembers({ 
-    members, 
+    members = [], 
     myRole, 
     myLevel, 
     canManageMembers, 

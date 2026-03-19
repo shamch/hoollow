@@ -27,7 +27,7 @@ interface ClubChatProps {
 }
 
 export default function ClubChat({ 
-    messages, 
+    messages = [], 
     messageText, 
     onMessageChange, 
     onSendMessage, 

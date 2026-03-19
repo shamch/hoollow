@@ -123,7 +123,10 @@ export default function ClubDetailPage() {
     const fetchMessages = useCallback(async () => {
         try {
             const res = await fetch(`/api/clubs/${clubId}/messages?channel=${activeChannel}`);
-            if (res.ok) setMessages(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                setMessages(data.messages || []);
+            }
         } catch (e) { console.error(e); }
     }, [clubId, activeChannel]);
 
@@ -141,7 +144,10 @@ export default function ClubDetailPage() {
     const fetchInviteCodes = useCallback(async () => {
         try {
             const res = await fetch(`/api/clubs/${clubId}/invite-codes`);
-            if (res.ok) setInviteCodes(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                setInviteCodes(data.codes || []);
+            }
         } catch (e) { console.error(e); }
     }, [clubId]);
 
