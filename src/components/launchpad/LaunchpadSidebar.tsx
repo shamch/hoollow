@@ -18,7 +18,7 @@ export default function LaunchpadSidebar({
     stats, topBuilders 
 }: LaunchpadSidebarProps) {
     return (
-        <aside className="w-[320px] h-screen sticky top-0 p-6 space-y-8 flex flex-col bg-[#000000]">
+        <div className="flex flex-col space-y-8 p-6">
             {/* Top Toolbar */}
             <div className="flex items-center gap-4 mb-2">
                 <div className="flex-1 relative group">
@@ -90,6 +90,6 @@ export default function LaunchpadSidebar({
                     </p>
                 </div>
             </div>
-        </aside>
+        </div>
     );
 }

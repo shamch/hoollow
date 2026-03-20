@@ -6,26 +6,27 @@ import { usePathname } from "next/navigation";
 import { 
     Home, 
     Rocket, 
-    FileText, 
-    Briefcase, 
-    Inbox, 
+    Users, 
+    Zap, 
+    Sparkles,
     Search, 
-    Megaphone,
+    MessageCircle,
+    Bell,
     CheckCircle,
     ChevronRight,
-    ArrowUpRight
+    ArrowUpRight,
+    SearchIcon
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Avatar from "../Avatar";
+import ImpactXPBadge from "../ImpactXPBadge";
 
 const navItems = [
-    { icon: Home, label: "Scroll", href: "/feed" },
+    { icon: Home, label: "Feed", href: "/feed" },
     { icon: Rocket, label: "Launchpad", href: "/launchpad" },
-    { icon: FileText, label: "Articles", href: "/articles" },
-    { icon: Briefcase, label: "Jobs", href: "/jobs" },
-    { icon: Inbox, label: "Inbox", href: "/inbox" },
-    { icon: Search, label: "Search", href: "/search" },
-    { icon: Megaphone, label: "Advertise", href: "/advertise", badge: "New" },
+    { icon: Users, label: "Clubs", href: "/clubs" },
+    { icon: Zap, label: "Collab", href: "/collab" },
+    { icon: Sparkles, label: "Super PRO", href: "/super", premium: true },
 ];
 
 export default function LeftSidebar() {
@@ -33,15 +34,21 @@ export default function LeftSidebar() {
     const { data: session } = useSession();
 
     return (
-        <aside className="w-64 h-screen sticky top-0 border-r border-white/5 flex flex-col bg-[#000000] z-50">
-            {/* Logo */}
-            <div className="p-6">
+        <div className="flex flex-col min-h-full z-50 border-white/5">
+            {/* Logo & Search */}
+            <div className="p-6 space-y-6">
                 <Link href="/" className="flex items-center gap-2 group">
-                    <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center font-black text-black">
-                        H
-                    </div>
                     <span className="text-xl font-black text-white tracking-tighter">Hoollow</span>
                 </Link>
+
+                <div className="relative group">
+                    <SearchIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" />
+                    <input 
+                        type="text" 
+                        placeholder="Search build, builders..." 
+                        className="w-full bg-[#111114] border border-white/5 rounded-xl py-2 pl-10 pr-4 text-xs font-medium text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/10 transition-all"
+                    />
+                </div>
             </div>
 
             {/* Nav Links */}
@@ -59,50 +66,54 @@ export default function LeftSidebar() {
                         >
                             <div className="flex items-center gap-3">
                                 <item.icon size={20} className={isActive ? "text-accent" : "text-zinc-500 group-hover:text-white"} />
-                                <span className="text-sm font-semibold tracking-tight">{item.label}</span>
+                                <span className={`text-sm tracking-tight ${isActive ? "font-black" : "font-semibold"}`}>{item.label}</span>
                             </div>
-                            {item.badge && (
-                                <span className="text-[10px] font-black uppercase bg-white text-black px-1.5 py-0.5 rounded-md">
-                                    {item.badge}
+                            {item.premium && (
+                                <span className="text-[9px] font-black uppercase bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-md">
+                                    PRO
                                 </span>
                             )}
                         </Link>
                     );
                 })}
+
+                <div className="pt-4 mt-4 border-t border-white/5 space-y-1">
+                    <Link href="/messages" className="flex items-center gap-3 px-3 py-2.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                        <MessageCircle size={20} />
+                        <span className="text-sm font-semibold tracking-tight">Messages</span>
+                    </Link>
+                    <Link href="/notifications" className="flex items-center gap-3 px-3 py-2.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                        <div className="relative">
+                            <Bell size={20} />
+                            <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-black" />
+                        </div>
+                        <span className="text-sm font-semibold tracking-tight">Notifications</span>
+                    </Link>
+                </div>
             </nav>
 
             {/* Bottom Section */}
             <div className="p-4 space-y-4">
-                {/* Verify Card */}
-                <div className="bg-[#111114] rounded-2xl p-4 border border-white/5 relative overflow-hidden group transition-all hover:border-accent/30">
-                    <div className="relative z-10">
-                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
-                            <CheckCircle size={20} className="text-accent" />
-                        </div>
-                        <h4 className="text-sm font-black text-white mb-1">Verify Identity!</h4>
-                        <p className="text-[11px] text-zinc-500 mb-3 font-medium">Get verified on Hoollow to boost your search ranking.</p>
-                        <button className="w-full py-2 bg-white text-black text-xs font-black rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
-                            Get Verified <ArrowUpRight size={14} />
-                        </button>
+                {/* XP & Profile */}
+                <div className="flex flex-col gap-4">
+                    <div className="px-3">
+                        <ImpactXPBadge score={session?.user?.impactXP || 0} size="sm" />
                     </div>
-                    {/* Decorative abstract shape */}
-                    <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-accent/10 blur-2xl rounded-full" />
+                    
+                    <Link href={`/u/${session?.user?.username || session?.user?.id || 'me'}`} className="flex items-center justify-between p-2 rounded-2xl hover:bg-white/5 transition-colors group">
+                        <div className="flex items-center gap-3">
+                            <Avatar image={session?.user?.image} name={session?.user?.name} size="sm" />
+                            <div className="flex flex-col">
+                                <span className="text-sm font-bold text-white leading-none mb-1">{session?.user?.name || "Guest"}</span>
+                                <span className="text-[10px] text-zinc-500 font-medium truncate max-w-[120px]">
+                                    {session?.user?.username ? `@${session.user.username}` : "View Profile"}
+                                </span>
+                            </div>
+                        </div>
+                        <ChevronRight size={16} className="text-zinc-600 group-hover:text-white transition-colors" />
+                    </Link>
                 </div>
-
-                {/* Profile */}
-                <Link href={`/u/${session?.user?.username || session?.user?.id || 'me'}`} className="flex items-center justify-between p-2 rounded-2xl hover:bg-white/5 transition-colors group">
-                    <div className="flex items-center gap-3">
-                        <Avatar image={session?.user?.image} name={session?.user?.name} size="sm" />
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold text-white leading-none mb-1">{session?.user?.name || "Guest"}</span>
-                            <span className="text-[10px] text-zinc-500 font-medium">
-                                {session?.user?.followers || 0} followers • {session?.user?.following || 0} following
-                            </span>
-                        </div>
-                    </div>
-                    <ChevronRight size={16} className="text-zinc-600 group-hover:text-white transition-colors" />
-                </Link>
             </div>
-        </aside>
+        </div>
     );
 }

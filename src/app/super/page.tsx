@@ -9,15 +9,15 @@ import {
     Users,
     Download,
     Send,
-    Lock,
     X,
     Crown,
+    ArrowRight,
 } from "lucide-react";
-import Navbar from "@/components/Navbar";
 import Avatar from "@/components/Avatar";
 import ImpactXPBadge from "@/components/ImpactXPBadge";
 import Button from "@/components/Button";
 import { useSession } from "next-auth/react";
+import AppLayout from "@/components/AppLayout";
 
 declare global {
     interface Window {
@@ -173,206 +173,222 @@ export default function SuperPage() {
         }
     };
 
+    const RightSidebarContent = (
+        <aside className="p-6 space-y-6">
+            <div className="bg-white/5 border border-white/5 rounded-[32px] p-6 backdrop-blur-xl">
+                <h3 className="text-[10px] font-black text-white/40 mb-6 uppercase tracking-widest flex items-center gap-2">
+                    <Settings size={14} className="text-premium" />
+                    Session Config
+                </h3>
+                <div className="space-y-6">
+                    <div>
+                        <label className="text-[9px] font-black text-white/20 block mb-1 uppercase tracking-widest">Topic</label>
+                        <p className="text-xs font-bold text-white italic truncate">B2B SaaS Validation</p>
+                    </div>
+                    <div>
+                        <label className="text-[9px] font-black text-white/20 block mb-1 uppercase tracking-widest">AI Brain</label>
+                        <p className="text-xs font-bold text-premium italic">GPT-4 Turbo Pro</p>
+                    </div>
+                    <div>
+                        <label className="text-[9px] font-black text-white/20 block mb-1 uppercase tracking-widest">Crew</label>
+                        <p className="text-xs font-bold text-white italic">3 Builders + 1 AI</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/5 rounded-[32px] p-6 backdrop-blur-xl">
+                <h3 className="text-[10px] font-black text-white/40 mb-6 uppercase tracking-widest flex items-center gap-2">
+                    <Users size={14} className="text-premium" />
+                    Active Members
+                </h3>
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 group">
+                        <Avatar name={session?.user?.name || "You"} size="sm" />
+                        <span className="text-xs font-bold text-white/80 flex-1 truncate group-hover:text-white transition-colors">
+                            {session?.user?.name || "You"}
+                        </span>
+                        <ImpactXPBadge score={session?.user?.impactXP || 50} size="sm" showIcon={false} />
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-premium flex items-center justify-center border border-white/10 shadow-lg shadow-premium/20">
+                            <Bot size={14} className="text-white" />
+                        </div>
+                        <span className="text-xs font-black text-premium italic">Super AI Agent</span>
+                    </div>
+                </div>
+            </div>
+
+            <button className="w-full flex items-center justify-center gap-3 text-[10px] font-black text-white/20 hover:text-white uppercase tracking-widest py-4 border border-white/5 rounded-[24px] transition-all hover:bg-white/5">
+                <Download size={14} />
+                Export Brief
+            </button>
+        </aside>
+    );
+
     return (
-        <>
-            <Navbar />
-            <main className="min-h-screen relative" style={{ background: "#1A1025" }}>
+        <AppLayout className="bg-[#0D0A14]" rightSidebar={RightSidebarContent}>
+            <div className="relative min-h-screen">
                 {/* ─── Header ─── */}
-                <div className="border-b border-white/10 px-6 py-4">
-                    <div className="max-w-content mx-auto flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <span className="inline-flex items-center gap-1.5 text-label px-3 py-1.5 rounded-pill bg-premium text-white font-semibold">
+                <div className="border-b border-white/5 px-8 py-6 backdrop-blur-xl sticky top-0 z-10 bg-[#0D0A14]/80">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <span className="inline-flex items-center gap-2 text-[10px] font-black px-4 py-2 rounded-full bg-premium text-white uppercase tracking-widest shadow-lg shadow-premium/20">
                                 <Sparkles size={12} />
-                                Super Environment
+                                Super Env
                             </span>
-                            <span className="text-label text-white/40">Premium Feature</span>
+                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">
+                                Premium Node
+                            </span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-small text-white/60">
-                                Session: B2B SaaS Validation Strategies
+                            <span className="text-[10px] font-medium text-white/40 italic">
+                                &ldquo;B2B SaaS Validation Strategies&rdquo;
                             </span>
                         </div>
                     </div>
                 </div>
 
-                {/* ─── Main Area ─── */}
-                <div className="max-w-content mx-auto px-6 py-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 min-h-[calc(100vh-180px)]">
-                        {/* Left — Thread */}
-                        <div className="flex flex-col">
-                            <div className="flex-1 space-y-4 mb-6">
-                                {mockMessages.map((msg) => (
-                                    <motion.div
-                                        key={msg.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className={`rounded-card p-5 ${msg.type === "ai"
-                                            ? "bg-premium/10 border border-premium/30"
-                                            : "bg-surface-alt border border-border"
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3 mb-3">
-                                            {msg.type === "ai" ? (
-                                                <div className="w-8 h-8 rounded-full bg-premium flex items-center justify-center">
-                                                    <Bot size={16} className="text-white" />
-                                                </div>
-                                            ) : (
-                                                <Avatar name={msg.author} size="md" />
-                                            )}
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-small font-semibold text-white">
-                                                    {msg.author}
-                                                </span>
-                                                {msg.type === "ai" && (
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider bg-premium/20 text-premium px-1.5 py-0.5 rounded-pill">
-                                                        AI
-                                                    </span>
-                                                )}
-                                                {msg.authorXP && (
-                                                    <ImpactXPBadge score={msg.authorXP} size="sm" showIcon={false} />
-                                                )}
+                {/* ─── Main Content ─── */}
+                <div className="px-8 py-8">
+                    <div className="flex flex-col gap-6">
+                        {/* Thread */}
+                        <div className="space-y-6 mb-24">
+                            {mockMessages.map((msg) => (
+                                <motion.div
+                                    key={msg.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`rounded-[32px] p-6 ${msg.type === "ai"
+                                        ? "bg-premium/5 border border-premium/20 backdrop-blur-sm"
+                                        : "bg-white/5 border border-white/5"
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-4 mb-4">
+                                        {msg.type === "ai" ? (
+                                            <div className="w-10 h-10 rounded-full bg-premium flex items-center justify-center border border-white/10 shadow-lg shadow-premium/20">
+                                                <Bot size={20} className="text-white" />
                                             </div>
-                                            <span className="text-label text-white/30 ml-auto">
-                                                {msg.timestamp}
+                                        ) : (
+                                            <Avatar name={msg.author} size="md" />
+                                        )}
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-sm font-black text-white">
+                                                {msg.author}
                                             </span>
+                                            {msg.type === "ai" && (
+                                                <span className="text-[9px] font-black uppercase tracking-widest bg-premium/20 text-premium px-2 py-0.5 rounded-full border border-premium/30">
+                                                    AI
+                                                </span>
+                                            )}
+                                            {msg.authorXP && (
+                                                <ImpactXPBadge score={msg.authorXP} size="sm" showIcon={false} />
+                                            )}
                                         </div>
-                                        <div className="text-small text-white/80 leading-relaxed whitespace-pre-line">
-                                            {msg.content}
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-
-                            {/* Input */}
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder="Type a message or ask the AI..."
-                                    className="w-full px-5 py-4 pr-12 bg-surface-alt border border-border rounded-card text-small text-text-primary placeholder-text-muted focus:outline-none focus:border-premium/50 transition-colors"
-                                />
-                                <button className="absolute right-4 top-1/2 -translate-y-1/2 text-premium hover:text-text-primary transition-colors">
-                                    <Send size={18} />
-                                </button>
-                            </div>
+                                        <span className="text-[10px] font-black text-white/20 ml-auto uppercase tracking-widest">
+                                            {msg.timestamp}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm text-white/70 leading-relaxed whitespace-pre-line font-medium px-2">
+                                        {msg.content}
+                                    </div>
+                                </motion.div>
+                            ))}
                         </div>
 
-                        {/* Right — Controls */}
-                        <aside className="hidden lg:block space-y-4">
-                        <div className="bg-surface-alt border border-border rounded-card p-5">
-                                <h3 className="text-label text-text-muted mb-4 uppercase tracking-wider font-semibold flex items-center gap-2">
-                                    <Settings size={14} />
-                                    Session Settings
-                                </h3>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="text-label text-white/40 block mb-1">Topic</label>
-                                        <p className="text-small text-white/80">B2B SaaS Validation</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-label text-white/40 block mb-1">AI Model</label>
-                                        <p className="text-small text-white/80">GPT-4 Enhanced</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-label text-white/40 block mb-1">Participants</label>
-                                        <p className="text-small text-white/80">3 humans + 1 AI</p>
-                                    </div>
+                        {/* Floating Input */}
+                        <div className="fixed bottom-8 left-[350px] right-[450px] z-20">
+                            <div className="relative group">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-premium to-accent rounded-[28px] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                                <div className="relative flex items-center bg-[#15111D] border border-white/10 rounded-[24px] p-2 pr-4 shadow-2xl">
+                                    <input
+                                        type="text"
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                        placeholder="Type a message or prompt AI..."
+                                        className="w-full bg-transparent px-6 py-3 text-sm text-white placeholder-white/20 focus:outline-none font-medium"
+                                    />
+                                    <button className="w-10 h-10 rounded-xl bg-premium flex items-center justify-center text-white hover:scale-110 transition-all shadow-lg shadow-premium/20">
+                                        <Send size={18} />
+                                    </button>
                                 </div>
                             </div>
-
-                        <div className="bg-surface-alt border border-border rounded-card p-5">
-                                <h3 className="text-label text-text-muted mb-4 uppercase tracking-wider font-semibold flex items-center gap-2">
-                                    <Users size={14} />
-                                    Participants
-                                </h3>
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-3">
-                                        <Avatar name={session?.user?.name || "You"} size="sm" />
-                                        <span className="text-small text-white/80 flex-1 truncate">
-                                            {session?.user?.name || "You"}
-                                        </span>
-                                        <ImpactXPBadge score={session?.user?.impactXP || 50} size="sm" showIcon={false} />
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-6 h-6 rounded-full bg-premium flex items-center justify-center">
-                                            <Bot size={12} className="text-white" />
-                                        </div>
-                                        <span className="text-small text-premium">Super AI Agent</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button className="w-full flex items-center justify-center gap-2 text-small text-white/40 hover:text-white/60 py-3 border border-white/10 rounded-card transition-colors">
-                                <Download size={14} />
-                                Export Session
-                            </button>
-                        </aside>
+                        </div>
                     </div>
                 </div>
 
                 {/* ─── Paywall Overlay ─── */}
                 {showPaywall && !checkingSubscription && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#1A1025]/80 backdrop-blur-sm">
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="bg-surface rounded-card p-8 max-w-md w-full mx-6 shadow-modal text-center relative"
+                            className="bg-[#111114] border border-white/10 rounded-[48px] p-10 max-w-md w-full mx-6 shadow-2xl text-center relative overflow-hidden"
                         >
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-premium via-accent to-premium" />
                             <button
                                 onClick={() => setShowPaywall(false)}
-                                className="absolute top-4 right-4 text-text-muted hover:text-text-primary"
+                                className="absolute top-6 right-6 text-white/20 hover:text-white transition-colors"
                             >
-                                <X size={20} />
+                                <X size={24} />
                             </button>
-                            <div className="w-16 h-16 mx-auto mb-6 bg-premium-soft rounded-full flex items-center justify-center">
-                                <Crown size={28} className="text-premium" />
+                            <div className="w-20 h-20 mx-auto mb-8 bg-premium/10 rounded-3xl flex items-center justify-center border border-premium/20">
+                                <Crown size={36} className="text-premium" />
                             </div>
-                            <h2 className="font-display text-xl font-semibold text-text-primary mb-2">
-                                Unlock Super Environment
+                            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-4">
+                                Enter Super Space
                             </h2>
-                            <p className="text-body text-text-secondary mb-6">
-                                Get access to AI-enhanced collaborative sessions, premium insights,
-                                and advanced workspace features.
+                            <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-10 leading-relaxed">
+                                Unlock AI-enhanced hyper-collaboration, premium insights, and advanced node tools.
                             </p>
-                            <div className="mb-6">
-                                <span className="text-3xl font-bold text-text-primary">₹299</span>
-                                <span className="text-text-muted">/month</span>
+                            
+                            <div className="bg-black/40 rounded-[32px] p-8 mb-10 border border-white/5">
+                                <div className="flex items-center justify-center gap-1 mb-2">
+                                    <span className="text-sm font-black text-white/40 uppercase tracking-widest">Only</span>
+                                    <span className="text-4xl font-black text-white italic tracking-tighter">₹299</span>
+                                </div>
+                                <span className="text-[10px] font-black text-premium uppercase tracking-widest">per month</span>
                             </div>
-                            <div className="space-y-3 text-left mb-8">
+
+                            <div className="space-y-4 text-left mb-10 px-4">
                                 {[
-                                    "AI-powered discussion assistant",
-                                    "Unlimited collaborative sessions",
-                                    "Premium analytics & insights",
-                                    "Priority support",
+                                    "AI-powered logic assistant",
+                                    "Unlimited hyper-sessions",
+                                    "Premium builder analytics",
+                                    "Priority node support",
                                 ].map((item) => (
-                                    <div key={item} className="flex items-center gap-2">
-                                        <div className="w-5 h-5 rounded-full bg-premium-soft flex items-center justify-center flex-shrink-0">
+                                    <div key={item} className="flex items-center gap-4">
+                                        <div className="w-6 h-6 rounded-full bg-premium/10 flex items-center justify-center flex-shrink-0 border border-premium/20">
                                             <Sparkles size={10} className="text-premium" />
                                         </div>
-                                        <span className="text-small text-text-secondary">{item}</span>
+                                        <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{item}</span>
                                     </div>
                                 ))}
                             </div>
+                            
                             <Button
                                 variant="premium"
                                 size="lg"
-                                className="w-full mb-3"
+                                className="w-full h-16 rounded-2xl text-[12px] font-black uppercase tracking-widest shadow-xl shadow-premium/20 group"
                                 onClick={handleSubscribe}
                                 disabled={processing}
                             >
-                                {processing ? "Processing..." : "Subscribe Now"}
+                                {processing ? "Initiating..." : (
+                                    <span className="flex items-center justify-center gap-2">
+                                        Subscribe Now <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                                    </span>
+                                )}
                             </Button>
+                            
                             <button
                                 onClick={() => setShowPaywall(false)}
-                                className="text-small text-text-muted hover:text-text-secondary transition-colors"
+                                className="mt-6 text-[10px] font-black text-white/20 hover:text-white/40 uppercase tracking-widest transition-all"
                             >
-                                Maybe later
+                                Maybe in the next phase
                             </button>
                         </motion.div>
                     </div>
                 )}
-            </main>
-        </>
+            </div>
+        </AppLayout>
     );
 }

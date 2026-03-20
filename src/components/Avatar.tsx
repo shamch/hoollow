@@ -2,8 +2,8 @@ import React from "react";
 import { getInitials } from "@/lib/mockData";
 
 interface AvatarProps {
-    name: string;
-    image?: string;
+    name?: string | null;
+    image?: string | null;
     size?: "sm" | "md" | "lg" | "xl";
     className?: string;
 }
