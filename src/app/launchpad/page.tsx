@@ -3,28 +3,23 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle } from "lucide-react";
-import { Rocket } from "lucide-react";
 import { Project } from "@/components/launchpad/constants";
 import LaunchpadHeader from "@/components/launchpad/LaunchpadHeader";
 import LaunchpadSidebar from "@/components/launchpad/LaunchpadSidebar";
 import LaunchpadGrid from "@/components/launchpad/LaunchpadGrid";
 import LaunchpadModals from "@/components/launchpad/LaunchpadModals";
-import LeftSidebar from "@/components/launchpad/LeftSidebar";
-
-import { categories, sortOptions } from "@/components/launchpad/constants";
+import AppLayout from "@/components/AppLayout";
+import { sortOptions } from "@/components/launchpad/constants";
 
 function useCountdown() {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
     useEffect(() => {
-        // Deterministic 30-day cycle based on UNIX epoch
         const cycleMs = 30 * 24 * 60 * 60 * 1000;
-
         const update = () => {
             const now = Date.now();
             const remainder = now % cycleMs;
             const diff = cycleMs - remainder;
-
             setTimeLeft({
                 days: Math.floor(diff / (1000 * 60 * 60 * 24)),
                 hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
@@ -32,8 +27,7 @@ function useCountdown() {
                 seconds: Math.floor((diff % (1000 * 60)) / 1000),
             });
         };
-
-        update(); // immediate first update
+        update();
         const timer = setInterval(update, 1000);
         return () => clearInterval(timer);
     }, []);
@@ -127,8 +121,6 @@ export default function LaunchpadPage() {
         }
     };
 
-    const topProjects = [...projects].sort((a, b) => b.upvotes - a.upvotes).slice(0, 5);
-
     const filteredProjects =
         activeCategory === "All"
             ? projects
@@ -143,14 +135,12 @@ export default function LaunchpadPage() {
         return b.xpThreshold - a.xpThreshold;
     });
 
-    // ─── Stats & Builders Calculation ───
     const stats = {
         totalProjects: projects.length,
         totalUpvotes: projects.reduce((acc, p) => acc + (p.upvotes || 0), 0),
         activeBuilders: new Set(projects.map(p => p.authorId)).size
     };
 
-    // Derived Top Builders from project data
     const topBuilders = Array.from(
         projects.reduce((acc, p) => {
             const author = p.author;
@@ -163,74 +153,51 @@ export default function LaunchpadPage() {
     ).map(([_, b]: [any, any]) => b).sort((a, b) => b.totalUpvotes - a.totalUpvotes);
 
     return (
-        <div className="flex min-h-screen bg-[#000000] selection:bg-accent/30 selection:text-white">
-            <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(255, 255, 255, 0.05);
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: rgba(255, 255, 255, 0.1);
-                }
-            `}</style>
-
-            {/* Left Persistent Navigation */}
-            <LeftSidebar />
-            
+        <AppLayout 
+            rightSidebar={
+                <LaunchpadSidebar 
+                    activeCategory={activeCategory}
+                    setActiveCategory={setActiveCategory}
+                    activeSort={activeSort}
+                    setActiveSort={setActiveSort}
+                    stats={stats}
+                    topBuilders={topBuilders}
+                />
+            }
+        >
             <div className="flex-1 flex flex-col min-w-0">
-                <div className="flex-1 flex flex-col lg:flex-row">
-                    {/* Main Content Column */}
-                    <main className="flex-1 min-w-0 border-r border-white/5 pb-32 overflow-y-auto h-screen custom-scrollbar">
-                        <LaunchpadHeader 
-                            countdown={countdown} 
-                            onOpenSubmit={() => setShowSubmitModal(true)} 
-                        />
+                <LaunchpadHeader 
+                    countdown={countdown} 
+                    onOpenSubmit={() => setShowSubmitModal(true)} 
+                />
 
-                        <div className="max-w-4xl mx-auto px-8 space-y-8 mt-4">
-                            <div className="flex items-center justify-between mb-2">
-                                <h2 className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-3">
-                                    {activeCategory} Breakthroughs
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    {sortOptions.map((sort) => (
-                                        <button
-                                            key={sort}
-                                            onClick={() => setActiveSort(sort)}
-                                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeSort === sort
-                                                ? "bg-white/10 text-white border border-white/10"
-                                                : "text-zinc-600 hover:text-zinc-400 border border-transparent"
-                                                }`}
-                                        >
-                                            {sort}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <LaunchpadGrid 
-                                projects={sortedProjects}
-                                loading={loading}
-                                onUpvote={handleUpvote}
-                                onRefresh={fetchProjects}
-                                onOpenSubmit={() => setShowSubmitModal(true)}
-                            />
+                <div className="max-w-4xl mx-auto px-8 space-y-8 mt-4 pb-32">
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.2em] flex items-center gap-3">
+                            {activeCategory} Breakthroughs
+                        </h2>
+                        <div className="flex items-center gap-2">
+                            {sortOptions.map((sort) => (
+                                <button
+                                    key={sort}
+                                    onClick={() => setActiveSort(sort)}
+                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeSort === sort
+                                        ? "bg-white/10 text-white border border-white/10"
+                                        : "text-zinc-600 hover:text-zinc-400 border border-transparent"
+                                        }`}
+                                >
+                                    {sort}
+                                </button>
+                            ))}
                         </div>
-                    </main>
+                    </div>
 
-                    {/* Right Sidebar */}
-                    <LaunchpadSidebar 
-                        activeCategory={activeCategory}
-                        setActiveCategory={setActiveCategory}
-                        activeSort={activeSort}
-                        setActiveSort={setActiveSort}
-                        stats={stats}
-                        topBuilders={topBuilders}
+                    <LaunchpadGrid 
+                        projects={sortedProjects}
+                        loading={loading}
+                        onUpvote={handleUpvote}
+                        onRefresh={fetchProjects}
+                        onOpenSubmit={() => setShowSubmitModal(true)}
                     />
                 </div>
             </div>
@@ -261,6 +228,6 @@ export default function LaunchpadPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </AppLayout>
     );
 }

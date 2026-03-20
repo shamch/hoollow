@@ -4,11 +4,10 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Users, Mail, Settings, Loader2 } from "lucide-react";
+import { MessageCircle, Users, Mail, Settings, Loader2, Hash, Volume2, Info, ChevronRight } from "lucide-react";
 
-import Navbar from "@/components/Navbar";
+import AppLayout from "@/components/AppLayout";
 import ClubHeader from "@/components/clubs/ClubHeader";
-import ClubSidebar from "@/components/clubs/ClubSidebar";
 import ClubChat from "@/components/clubs/ClubChat";
 import ClubMembers from "@/components/clubs/ClubMembers";
 import ClubSettings from "@/components/clubs/ClubSettings";
@@ -19,6 +18,7 @@ import {
     DeleteModal 
 } from "@/components/clubs/ClubModals";
 import { ROLE_LEVEL } from "@/components/clubs/constants";
+import Avatar from "@/components/Avatar";
 
 export default function ClubDetailPage() {
     const params = useParams();
@@ -106,7 +106,6 @@ export default function ClubDetailPage() {
                     permissions: data.permissions
                 });
                 
-                // Check for pending join request
                 const reqRes = await fetch(`/api/clubs/${clubId}/join-requests`);
                 if (reqRes.ok) {
                     const requests = await reqRes.json();
@@ -369,26 +368,23 @@ export default function ClubDetailPage() {
             });
             if (res.ok) {
                 setShowDeleteModal(false);
-                fetchClub(); // Will show scheduled deletion status
+                fetchClub();
             }
         } catch (e) { console.error(e); }
         finally { setDeletingClub(false); }
     };
 
-    // Expose delete modal trigger to window for the settings component
     useEffect(() => {
         (window as any).triggerDeleteModal = () => setShowDeleteModal(true);
         return () => { delete (window as any).triggerDeleteModal; };
     }, []);
 
-    // ─── Render ───
+    // ─── Render Components for Sidebar ───
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0c0c0e] flex items-center justify-center">
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
-                    <Loader2 size={40} className="text-accent" />
-                </motion.div>
+            <div className="h-screen bg-[#0c0c0e] flex items-center justify-center">
+                <Loader2 size={40} className="text-accent animate-spin" />
             </div>
         );
     }
@@ -398,113 +394,203 @@ export default function ClubDetailPage() {
     const myRole = club.currentUserRole;
     const myLevel = myRole ? ROLE_LEVEL[myRole] || 0 : 0;
     const isOwner = myRole === "owner";
-    const canManageMembers = myLevel >= 2; // Moderator+
-    const canEditSettings = myLevel >= 3; // Co-owner+
+    const canManageMembers = myLevel >= 2;
+    const canEditSettings = myLevel >= 3;
 
-    const tabs = [
-        { key: "chat", label: "Hub", icon: <MessageCircle size={16} />, count: club.messageCount },
-        { key: "members", label: "Tribe", icon: <Users size={16} />, count: club.memberCount },
-        ...(canManageMembers ? [{ key: "invitations", label: "Recruits", icon: <Mail size={16} />, count: receivedInvites.length }] : []),
-        ...(canEditSettings ? [{ key: "settings", label: "Engine", icon: <Settings size={16} /> }] : []),
-    ];
+    const ClubSidebarContent = (
+        <aside className="p-8 space-y-10">
+            {/* Club Context / Channels */}
+            {club.isMember && (
+                <div className="bg-[#0A0A0B] border border-white/5 rounded-[32px] p-6">
+                    <h3 className="text-[10px] font-black text-zinc-500 mb-6 uppercase tracking-widest flex items-center gap-2">
+                        <MessageCircle size={14} className="text-accent" /> Control Center
+                    </h3>
+                    <div className="space-y-2">
+                        <button
+                            onClick={() => { setActiveTab("chat"); setActiveChannel("general"); }}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                                activeTab === "chat" && activeChannel === "general"
+                                    ? "bg-white text-black shadow-xl"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
+                            }`}
+                        >
+                            <Hash size={14} /> General
+                        </button>
+                        <button
+                            onClick={() => { setActiveTab("chat"); setActiveChannel("announcements"); }}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                                activeTab === "chat" && activeChannel === "announcements"
+                                    ? "bg-white text-black shadow-xl"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
+                            }`}
+                        >
+                            <Volume2 size={14} /> Announcements
+                        </button>
+                    </div>
+
+                    <div className="mt-8 pt-8 border-t border-white/5 space-y-2">
+                        <button
+                            onClick={() => setActiveTab("members")}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                                activeTab === "members"
+                                    ? "bg-white text-black shadow-xl"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
+                            }`}
+                        >
+                            <Users size={14} /> Members ({club.memberCount})
+                        </button>
+                        {canEditSettings && (
+                            <button
+                                onClick={() => setActiveTab("settings")}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                                    activeTab === "settings"
+                                        ? "bg-white text-black shadow-xl"
+                                        : "text-zinc-500 hover:text-white hover:bg-white/5"
+                                }`}
+                            >
+                                <Settings size={14} /> Settings
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* About / Stats */}
+            <div className="bg-[#0A0A0B] border border-white/5 rounded-[32px] p-6">
+                <h3 className="text-[10px] font-black text-zinc-500 mb-6 uppercase tracking-widest flex items-center gap-2">
+                    <Info size={14} className="text-accent" /> Intelligence
+                </h3>
+                <div className="space-y-4">
+                    <div>
+                        <p className="text-[9px] font-black text-zinc-700 uppercase tracking-widest mb-1">Domain</p>
+                        <p className="text-xs font-black text-white italic uppercase">{club.domain}</p>
+                    </div>
+                    <div>
+                        <p className="text-[9px] font-black text-zinc-700 uppercase tracking-widest mb-1">Vibe</p>
+                        <p className="text-xs font-black text-white italic uppercase">{club.vibe}</p>
+                    </div>
+                    {club.impactXP !== undefined && (
+                        <div className="pt-4 border-t border-white/5">
+                            <p className="text-[9px] font-black text-zinc-700 uppercase tracking-widest mb-1">ImpactXP</p>
+                            <p className="text-2xl font-black text-accent italic">{club.impactXP}</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Members Preview */}
+            <div className="bg-[#0A0A0B] border border-white/5 rounded-[32px] p-6">
+                <h3 className="text-[10px] font-black text-zinc-500 mb-6 uppercase tracking-widest flex items-center gap-2">
+                    <Users size={14} className="text-accent" /> Tribe
+                </h3>
+                <div className="flex -space-x-2">
+                    {club.members?.slice(0, 5).map((m: any) => (
+                        <Avatar key={m.id} name={m.user.name} image={m.user.image} size="sm" className="ring-2 ring-[#0A0A0B]" />
+                    ))}
+                    {club.memberCount > 5 && (
+                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-zinc-500">
+                            +{club.memberCount - 5}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </aside>
+    );
 
     return (
-        <div className="h-screen bg-[#0c0c0e] flex flex-col overflow-hidden">
-            <Navbar />
-            
-            <div className="flex-1 flex overflow-hidden">
-                {club.isMember ? (
-                    <>
-                        <ClubSidebar 
-                            club={{ ...club, tabs }}
-                            activeTab={activeTab}
-                            onTabChange={(t) => setActiveTab(t)}
-                            activeChannel={activeChannel}
-                            onChannelChange={(c) => setActiveChannel(c)}
-                            myRole={myRole}
-                        />
+        <AppLayout rightSidebar={ClubSidebarContent}>
+            <div className="flex flex-col h-full bg-[#0c0c0e]">
+                <ClubHeader 
+                    club={club}
+                    isMember={club.isMember}
+                    hasPendingRequest={hasPendingRequest}
+                    onJoinLeave={handleJoinLeave}
+                />
+                
+                <main className="flex-1 flex flex-col overflow-hidden relative">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab + activeChannel}
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="flex-1 flex flex-col overflow-hidden"
+                        >
+                            {club.isMember ? (
+                                <>
+                                    {activeTab === "chat" && (
+                                        <ClubChat 
+                                            messages={messages}
+                                            messageText={messageText}
+                                            onMessageChange={setMessageText}
+                                            onSendMessage={handleSendMessage}
+                                            sending={sendingMessage}
+                                            channel={activeChannel}
+                                            currentUserId={session?.user?.id}
+                                        />
+                                    )}
 
-                        <main className="flex-1 flex flex-col overflow-hidden relative">
-                            {activeTab === "chat" && (
-                                <ClubChat 
-                                    messages={messages}
-                                    messageText={messageText}
-                                    onMessageChange={setMessageText}
-                                    onSendMessage={handleSendMessage}
-                                    sending={sendingMessage}
-                                    channel={activeChannel}
-                                    currentUserId={session?.user?.id}
-                                />
-                            )}
+                                    {activeTab === "members" && (
+                                        <div className="p-8 overflow-y-auto custom-scrollbar">
+                                            <ClubMembers 
+                                                members={club.members}
+                                                myRole={myRole}
+                                                myLevel={myLevel}
+                                                canManageMembers={canManageMembers}
+                                                activeMemberId={activeMemberId}
+                                                setActiveMemberId={setActiveMemberId}
+                                                currentUserId={session?.user?.id}
+                                                onAction={handleMemberAction}
+                                            />
+                                        </div>
+                                    )}
 
-                            {activeTab === "members" && (
-                                <ClubMembers 
-                                    members={club.members}
-                                    myRole={myRole}
-                                    myLevel={myLevel}
-                                    canManageMembers={canManageMembers}
-                                    activeMemberId={activeMemberId}
-                                    setActiveMemberId={setActiveMemberId}
-                                    currentUserId={session?.user?.id}
-                                    onAction={handleMemberAction}
-                                />
+                                    {activeTab === "settings" && (
+                                        <div className="p-8 overflow-y-auto custom-scrollbar">
+                                            <ClubSettings 
+                                                club={{ ...club, inviteCodes }}
+                                                editState={editState}
+                                                setEditState={setEditState}
+                                                saving={savingSettings}
+                                                onSave={handleSaveSettings}
+                                                onImageUpload={handleImageUpload}
+                                                onRegenerateCode={handleRegenerateMainCode}
+                                                onGenerateNewCode={handleGenerateInviteCode}
+                                                onRevokeCode={handleRevokeCode}
+                                                onPermissionChange={handlePermissionChange}
+                                                isOwner={isOwner}
+                                                uploadingLogo={uploadingLogo}
+                                                uploadingBanner={uploadingBanner}
+                                                logoInputRef={logoInputRef}
+                                                bannerInputRef={bannerInputRef}
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="max-w-xl mx-auto px-6 py-32 text-center space-y-10">
+                                    <div className="w-24 h-24 mx-auto rounded-[40px] bg-white/5 border border-white/10 flex items-center justify-center text-zinc-800 shadow-2xl">
+                                        <Users size={48} />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">Transmission Blocked</h2>
+                                        <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest max-w-sm mx-auto leading-loose">
+                                            You must interface with this community to access the secure communication hub and biological data streams.
+                                        </p>
+                                    </div>
+                                    <div className="pt-8">
+                                        <button 
+                                            onClick={handleJoinLeave}
+                                            className="px-12 py-5 bg-white text-black text-[12px] font-black uppercase tracking-widest rounded-full hover:scale-105 transition-all shadow-2xl"
+                                        >
+                                            {club.type === "open" ? "Authorize Entry" : "Request Authorization"}
+                                        </button>
+                                    </div>
+                                </div>
                             )}
-
-                            {activeTab === "settings" && (
-                                <ClubSettings 
-                                    club={{ ...club, inviteCodes }}
-                                    editState={editState}
-                                    setEditState={setEditState}
-                                    saving={savingSettings}
-                                    onSave={handleSaveSettings}
-                                    onImageUpload={handleImageUpload}
-                                    onRegenerateCode={handleRegenerateMainCode}
-                                    onGenerateNewCode={handleGenerateInviteCode}
-                                    onRevokeCode={handleRevokeCode}
-                                    onPermissionChange={handlePermissionChange}
-                                    isOwner={isOwner}
-                                    uploadingLogo={uploadingLogo}
-                                    uploadingBanner={uploadingBanner}
-                                    logoInputRef={logoInputRef}
-                                    bannerInputRef={bannerInputRef}
-                                />
-                            )}
-                            
-                            {/* Visual background element */}
-                            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                        </main>
-                    </>
-                ) : (
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        <ClubHeader 
-                            club={club}
-                            isMember={false}
-                            hasPendingRequest={hasPendingRequest}
-                            onJoinLeave={handleJoinLeave}
-                        />
-                        
-                        <div className="max-w-4xl mx-auto px-6 py-20 text-center space-y-8">
-                            <div className="w-24 h-24 mx-auto rounded-[40px] bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 shadow-2xl">
-                                <Users size={48} />
-                            </div>
-                            <div className="space-y-4">
-                                <h2 className="text-4xl font-black text-white tracking-tight">Access Restricted</h2>
-                                <p className="text-zinc-500 max-w-lg mx-auto font-medium leading-relaxed">
-                                    Join this community to access the secure communication hub, collaborate with builders, and participate in exclusive events.
-                                </p>
-                            </div>
-                            <div className="pt-4">
-                                <Button 
-                                    variant="primary" 
-                                    onClick={handleJoinLeave}
-                                    className="px-12 py-5 rounded-full text-lg shadow-[0_0_50px_rgba(var(--accent-rgb),0.2)]"
-                                >
-                                    {club.type === "open" ? "Entry Granted - Join Now" : "Request Community Access"}
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                        </motion.div>
+                    </AnimatePresence>
+                </main>
             </div>
 
             {/* Modals */}
@@ -549,6 +635,6 @@ export default function ClubDetailPage() {
                 otpSent={deleteOtpSent}
                 onSendOtp={handleSendDeleteOtp}
             />
-        </div>
+        </AppLayout>
     );
 }
