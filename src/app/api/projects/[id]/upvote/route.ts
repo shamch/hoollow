@@ -19,8 +19,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
         if (existing) {
             // Remove upvote
-            await (prisma as any).projectUpvote.delete({
-                where: { id: existing.id },
+            await (prisma as any).projectUpvote.deleteMany({
+                where: { projectId_userId: { projectId, userId: session.user.id } },
             });
             const project = await prisma.project.update({
                 where: { id: projectId },

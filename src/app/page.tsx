@@ -247,7 +247,7 @@ export default function LandingPage() {
                 {
                   icon: <Rocket size={24} />,
                   title: "Launchpad",
-                  desc: "Submit your project for 48-hour community voting. Top-voted projects get featured, investor visibility, and ImpactXP rewards.",
+                  desc: "Submit your project for 30-day community voting. Top-voted projects get featured, investor visibility, and ImpactXP rewards.",
                   premium: false,
                 },
                 {
@@ -382,7 +382,7 @@ export default function LandingPage() {
               variants={fadeInUp}
               className="text-body text-text-secondary text-center mb-12 max-w-lg mx-auto"
             >
-              Submit to the 48-hour Launchpad. Top-voted projects get investor visibility and ImpactXP rewards.
+              Submit to the 30-day Launchpad. Top-voted projects get investor visibility and ImpactXP rewards.
             </motion.p>
             <motion.div
               className="grid grid-cols-1 md:grid-cols-3 gap-6"

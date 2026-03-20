@@ -26,8 +26,10 @@ model User {
   posts         Post[]
   projects      Project[]
   comments      Comment[]
+  projectComments ProjectComment[]
   upvotes       Upvote[]
   projectUpvotes ProjectUpvote[]
+  projectRatings ProjectRating[]
   clubMembers   ClubMember[]
   clubMessages  ClubMessage[]
   subscriptions Subscription[]
@@ -139,9 +141,14 @@ model Project {
   description String    @db.Text
   tags        Json      @default("[]")
   xpThreshold Int       @default(0)
+  logo        String?   @db.Text
+  banner      String?   @db.Text
   thumbnail   String?
   imageUrl    String?   @db.Text
+  media       Json      @default("[]") // Array of { url: string, type: 'image' | 'video' }
+  demoUrl     String?   @db.Text
   githubUrl   String?
+  isOpenSource Boolean  @default(false)
   upvotes     Int       @default(0)
   openToCollab Boolean  @default(false)
   expiresAt   DateTime? // For the 48-hour launchpad
@@ -150,7 +157,11 @@ model Project {
   author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   collabRequests CollabRequest[] @relation("collabProject")
   projectUpvotes ProjectUpvote[]
+  comments     ProjectComment[]
+  ratings      ProjectRating[]
 
+  views       Int       @default(0)
+  
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -170,8 +181,44 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([postId])
   @@index([authorId])
+}
+
+model ProjectComment {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([authorId])
+}
+
+model ProjectRating {
+  id        String   @id @default(cuid())
+  idea      Int      @default(0) // 1-5
+  execution Int      @default(0) // 1-5
+  design    Int      @default(0) // 1-5
+  
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
 }
 
 model Upvote {
