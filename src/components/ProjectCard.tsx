@@ -17,32 +17,9 @@ import Avatar from "./Avatar";
 import ImpactXPBadge from "./ImpactXPBadge";
 import UpvoteButton from "./UpvoteButton";
 import Button from "./Button";
+import { Project as ProjectData } from "./launchpad/constants";
 import { useSession } from "next-auth/react";
-
-interface ProjectAuthor {
-    id: string;
-    name: string;
-    image: string;
-    role: string;
-    impactXP: number;
-}
-
-interface ProjectData {
-    id: string;
-    name: string;
-    description: string;
-    tags: string[] | string;
-    upvotes: number;
-    xpThreshold: number;
-    authorId: string;
-    author: ProjectAuthor;
-    expiresAt?: string;
-    createdAt: string;
-    thumbnail?: string;
-    githubUrl?: string | null;
-    imageUrl?: string | null;
-    openToCollab?: boolean;
-}
+import ProjectDetailModal from "./launchpad/ProjectDetailModal";
 
 interface ProjectCardProps {
     project: ProjectData;
@@ -61,6 +38,7 @@ export default function ProjectCard({ project, onUpvote, onUpdated }: ProjectCar
     const [showCollabModal, setShowCollabModal] = useState(false);
     const [collabMessage, setCollabMessage] = useState("");
     const [collabSent, setCollabSent] = useState(false);
+    const [showDetail, setShowDetail] = useState(false);
 
     // Edit state
     const [editName, setEditName] = useState(project.name);
@@ -135,72 +113,127 @@ export default function ProjectCard({ project, onUpvote, onUpdated }: ProjectCar
         <>
             <motion.div
                 layout
-                className="bg-surface border border-border rounded-card p-5 transition-all duration-200 hover:shadow-card-hover"
+                whileHover={{ y: -4 }}
+                onClick={() => setShowDetail(true)}
+                className="group relative bg-[#111114]/50 backdrop-blur-xl border border-white/5 rounded-[32px] overflow-hidden hover:border-accent/30 transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] cursor-pointer"
             >
-                {/* Header */}
-                <div className="flex items-center gap-3 mb-3">
-                    <Avatar name={project.author?.name || "User"} image={project.author?.image} size="md" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-card-title font-semibold text-text-primary truncate">{project.name}</p>
-                        <div className="flex items-center gap-2">
-                            <p className="text-small text-text-muted truncate">{project.author?.name || "User"}</p>
+                {/* Image Overlay Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 z-0 pointer-events-none" />
+
+                {/* Main Content */}
+                <div className="relative z-10 p-6">
+                    {/* Header */}
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="relative">
+                            <Avatar name={project.author?.name || "User"} image={project.author?.image} size="md" />
                             {project.openToCollab && (
-                                <span className="text-[9px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-1.5 py-0.5 rounded-pill">Collab</span>
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#111114] shadow-sm" />
                             )}
                         </div>
-                    </div>
-                    {isOwner && (
-                        <div className="relative">
-                            <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-btn text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors">
-                                <MoreHorizontal size={16} />
-                            </button>
-                            <AnimatePresence>
-                                {showMenu && (
-                                    <motion.div initial={{ opacity: 0, y: -5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -5, scale: 0.95 }} className="absolute right-0 top-10 w-40 bg-surface border border-border rounded-card shadow-card-hover py-1 z-20">
-                                        <button onClick={handleEdit} className="w-full text-left px-4 py-2 text-small text-text-secondary hover:bg-surface-alt flex items-center gap-2 transition-colors"><Edit3 size={14} /> Edit</button>
-                                        <button onClick={() => { setShowDeleteConfirm(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-small text-red-500 hover:bg-red-50 flex items-center gap-2 transition-colors"><Trash2 size={14} /> Delete</button>
-                                    </motion.div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-base font-black text-white tracking-tight truncate group-hover:text-accent transition-colors">
+                                {project.name}
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest truncate">
+                                    {project.author?.name || "User"}
+                                </span>
+                                {project.openToCollab && (
+                                    <span className="text-[9px] font-black uppercase tracking-tighter bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">
+                                        Open to Collab
+                                    </span>
                                 )}
-                            </AnimatePresence>
+                            </div>
+                        </div>
+                        {isOwner && (
+                            <div className="relative">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }} 
+                                    className="p-2 rounded-xl text-zinc-600 hover:text-white hover:bg-white/5 transition-all"
+                                >
+                                    <MoreHorizontal size={18} />
+                                </button>
+                                <AnimatePresence>
+                                    {showMenu && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: -10, scale: 0.95 }} 
+                                            animate={{ opacity: 1, y: 0, scale: 1 }} 
+                                            exit={{ opacity: 0, y: -10, scale: 0.95 }} 
+                                            className="absolute right-0 top-12 w-44 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl py-2 z-20 backdrop-blur-xl"
+                                        >
+                                            <button onClick={(e) => { e.stopPropagation(); handleEdit(); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5 flex items-center gap-3 transition-colors">
+                                                <Edit3 size={14} /> Edit Project
+                                            </button>
+                                            <div className="h-px bg-white/5 my-1" />
+                                            <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-500 hover:bg-red-500/10 flex items-center gap-3 transition-colors">
+                                                <Trash2 size={14} /> Delete
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Image */}
+                    {(project.imageUrl || project.thumbnail) && (
+                        <div className="mb-5 rounded-[24px] overflow-hidden aspect-[16/10] relative border border-white/5 shadow-inner">
+                            <img 
+                                src={project.imageUrl || project.thumbnail || ""} 
+                                alt="" 
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                                onError={(e) => { (e.target as HTMLImageElement).parentElement?.remove(); }} 
+                            />
                         </div>
                     )}
-                </div>
 
-                {/* Image */}
-                {(project.imageUrl || project.thumbnail) && (
-                    <div className="mb-3 rounded-card overflow-hidden border border-border">
-                        <img src={project.imageUrl || project.thumbnail || ""} alt="" className="w-full h-40 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                    </div>
-                )}
+                    <p className="text-sm text-zinc-400 leading-relaxed mb-6 line-clamp-3">
+                        {project.description}
+                    </p>
 
-                <p className="text-body text-text-secondary mb-3 line-clamp-2">{project.description}</p>
+                    {/* GitHub Link */}
+                    {project.githubUrl && (
+                        <a 
+                            href={project.githubUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-3 mb-6 p-4 bg-white/[0.03] rounded-2xl border border-white/5 hover:border-white/20 transition-all group/gh"
+                        >
+                            <div className="w-8 h-8 rounded-xl bg-zinc-950 flex items-center justify-center text-white">
+                                <Github size={16} />
+                            </div>
+                            <span className="font-bold text-xs text-zinc-300 flex-1 truncate">{project.githubUrl.split("/").slice(-2).join("/")}</span>
+                            <ExternalLink size={14} className="text-zinc-600 group-hover/gh:text-white transition-colors" />
+                        </a>
+                    )}
 
-                {/* GitHub Link */}
-                {project.githubUrl && (
-                    <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 mb-3 px-3 py-2 bg-surface-alt rounded-card border border-border hover:border-text-muted transition-colors group text-small">
-                        <Github size={14} className="text-text-primary" />
-                        <span className="font-medium text-text-primary flex-1 truncate">{project.githubUrl.replace("https://github.com/", "")}</span>
-                        <ExternalLink size={12} className="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </a>
-                )}
-
-                {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                        {tags.slice(0, 3).map((tag: string) => (
-                            <span key={tag} className="text-label px-2 py-0.5 rounded-pill bg-surface-alt text-text-secondary">{tag}</span>
-                        ))}
-                    </div>
-                )}
-
-                <div className="flex items-center justify-between border-t border-border pt-3">
-                    <UpvoteButton count={project.upvotes} voted={false} onUpvote={onUpvote} />
-                    <div className="flex items-center gap-2">
-                        {project.openToCollab && !isOwner && session?.user && (
-                            <button onClick={() => setShowCollabModal(true)} className="inline-flex items-center gap-1 text-label font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-pill hover:bg-green-200 transition-colors">
-                                <Users size={11} /> Collab
-                            </button>
-                        )}
-                        {project.xpThreshold > 0 && <ImpactXPBadge score={project.xpThreshold} size="sm" />}
+                    {/* Footer Info */}
+                    <div className="flex items-center justify-between mt-auto">
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <UpvoteButton 
+                                count={project.upvotes} 
+                                voted={false} 
+                                onUpvote={onUpvote} 
+                            />
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            {tags.length > 0 && (
+                                <div className="hidden sm:flex gap-1.5">
+                                    {tags.slice(0, 1).map((tag: string) => (
+                                        <span key={tag} className="text-[10px] font-black uppercase tracking-tighter text-zinc-500 px-2 py-0.5 rounded-full border border-white/5">
+                                            #{tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            {project.xpThreshold > 0 && (
+                                <div className="opacity-80 scale-90">
+                                    <ImpactXPBadge score={project.xpThreshold} size="sm" />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </motion.div>
@@ -296,6 +329,14 @@ export default function ProjectCard({ project, onUpvote, onUpdated }: ProjectCar
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Project Detail Modal */}
+            <ProjectDetailModal 
+                project={project}
+                isOpen={showDetail}
+                onClose={() => setShowDetail(false)}
+                onUpdate={onUpdated}
+            />
         </>
     );
 }

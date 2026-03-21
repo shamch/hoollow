@@ -26,8 +26,10 @@ model User {
   posts         Post[]
   projects      Project[]
   comments      Comment[]
+  projectComments ProjectComment[]
   upvotes       Upvote[]
   projectUpvotes ProjectUpvote[]
+  projectRatings ProjectRating[]
   clubMembers   ClubMember[]
   clubMessages  ClubMessage[]
   subscriptions Subscription[]
@@ -50,12 +52,24 @@ model User {
   // Club join requests
   clubJoinRequests    ClubJoinRequest[]
   
+  // Club bans
+  clubBans            ClubBan[]
+  
+  // XP History
+  xpHistory           XPHistory[]
+  
   // Saved posts
   savedPosts          SavedPost[]
   
   accounts      Account[]
   sessions      Session[]
 
+  scheduledDeletionDate DateTime?
+  deleteOTP             String?
+  deleteOTPExpires      DateTime?
+  clubTransferOTP       String?
+  clubTransferOTPExpires DateTime?
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -127,9 +141,14 @@ model Project {
   description String    @db.Text
   tags        Json      @default("[]")
   xpThreshold Int       @default(0)
+  logo        String?   @db.Text
+  banner      String?   @db.Text
   thumbnail   String?
   imageUrl    String?   @db.Text
+  media       Json      @default("[]") // Array of { url: string, type: 'image' | 'video' }
+  demoUrl     String?   @db.Text
   githubUrl   String?
+  isOpenSource Boolean  @default(false)
   upvotes     Int       @default(0)
   openToCollab Boolean  @default(false)
   expiresAt   DateTime? // For the 48-hour launchpad
@@ -138,7 +157,11 @@ model Project {
   author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   collabRequests CollabRequest[] @relation("collabProject")
   projectUpvotes ProjectUpvote[]
+  comments     ProjectComment[]
+  ratings      ProjectRating[]
 
+  views       Int       @default(0)
+  
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -158,8 +181,44 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([postId])
   @@index([authorId])
+}
+
+model ProjectComment {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([authorId])
+}
+
+model ProjectRating {
+  id        String   @id @default(cuid())
+  idea      Int      @default(0) // 1-5
+  execution Int      @default(0) // 1-5
+  design    Int      @default(0) // 1-5
+  
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
 }
 
 model Upvote {
@@ -196,18 +255,32 @@ model ProjectUpvote {
 
 model Club {
   id          String       @id @default(cuid())
-  name        String
+  name        String       @unique
   description String       @db.Text
   type        String       @default("open") // open, invite, application
+  visibility  String       @default("public") // public, private
+  inviteCode  String?      @unique // auto-generated for private clubs
   domain      String       @default("Tech")
-  gradient    String       @default("linear-gradient(135deg, #667eea 0%, #764ba2 100%)")
+  gradient    String       @default("linear-gradient(to right, #4facfe 0%, #00f2fe 100%)")
+  banner      String?
+  logo        String?
+  themeColor  String       @default("#6366f1")
+  vibe        String       @default("professional")
   tags        Json         @default("[]")
+  permissions Json         @default("{\"coowner\":{\"kick\":true,\"ban\":true,\"timeout\":true,\"manageInvites\":true,\"editSettings\":true,\"postAnnouncements\":true},\"moderator\":{\"kick\":false,\"ban\":false,\"timeout\":true,\"manageInvites\":false,\"editSettings\":false,\"postAnnouncements\":false},\"member\":{\"kick\":false,\"ban\":false,\"timeout\":false,\"manageInvites\":false,\"editSettings\":false,\"postAnnouncements\":false}}")
   creatorId   String?      // Track the original creator
+  
+  // Deletion scheduling
+  scheduledDeletion  DateTime?
+  deleteOTP          String?
+  deleteOTPExpires   DateTime?
   
   members      ClubMember[]
   messages     ClubMessage[]
   invitations  ClubInvitation[]
   joinRequests ClubJoinRequest[]
+  inviteCodes  ClubInviteCode[]
+  bans         ClubBan[]
   
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -233,6 +306,7 @@ model ClubMember {
 model ClubMessage {
   id        String   @id @default(cuid())
   text      String   @db.Text
+  channel   String   @default("general") // general, announcements
   
   clubId    String
   club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
@@ -244,6 +318,40 @@ model ClubMessage {
 
   @@index([clubId])
   @@index([authorId])
+}
+
+model ClubInviteCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  label     String?
+  maxUses   Int       @default(0) // 0 = unlimited
+  uses      Int       @default(0)
+  
+  clubId    String
+  club      Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  @@index([clubId])
+}
+
+model ClubBan {
+  id        String    @id @default(cuid())
+  reason    String?
+  expiresAt DateTime? // null = permanent ban, non-null = timeout
+  
+  clubId    String
+  club      Club      @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime  @default(now())
+
+  @@unique([clubId, userId])
+  @@index([clubId])
+  @@index([userId])
 }
 
 model CollabRequest {
@@ -390,5 +498,16 @@ model SavedPost {
 
   @@unique([postId, userId])
   @@index([postId])
+  @@index([userId])
+}
+
+model XPHistory {
+  id        String   @id @default(cuid())
+  amount    Int
+  reason    String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
   @@index([userId])
 }

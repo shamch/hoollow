@@ -76,10 +76,13 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-center">
               {/* Left */}
               <motion.div className="lg:col-span-3" variants={fadeInUp}>
-                <h1 className="font-display text-hero text-text-primary mb-6">
-                  Build. Prove.
-                  <br />
-                  Get Seen.
+                <h1 className="font-display text-hero mb-6 leading-[0.9] tracking-tight uppercase">
+                  <span className="block text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-zinc-400">
+                    From Ideas
+                  </span>
+                  <span className="block text-transparent bg-clip-text bg-gradient-to-b from-[#f9a8ff] via-[#e879f9] to-[#a855f7]">
+                    To Execution
+                  </span>
                 </h1>
                 <p className="text-lg text-text-secondary max-w-lg mb-8 leading-relaxed">
                   Hoollow is the proof-of-work ecosystem for student builders and young
@@ -146,20 +149,8 @@ export default function LandingPage() {
               variants={fadeInUp}
             >
               <p className="text-small text-text-muted mb-6 uppercase tracking-wider font-semibold">
-                Used by builders from →
+                Used by top college students and professors
               </p>
-              <div className="flex items-center gap-10 overflow-x-auto pb-4">
-                {["IIT Delhi", "BITS Pilani", "NIT Trichy", "IIIT Hyderabad", "VIT Vellore", "DTU"].map(
-                  (name) => (
-                    <span
-                      key={name}
-                      className="text-lg font-semibold text-text-muted/50 whitespace-nowrap font-display"
-                    >
-                      {name}
-                    </span>
-                  )
-                )}
-              </div>
             </motion.div>
           </div>
         </motion.section>
@@ -256,7 +247,7 @@ export default function LandingPage() {
                 {
                   icon: <Rocket size={24} />,
                   title: "Launchpad",
-                  desc: "Submit your project for 48-hour community voting. Top-voted projects get featured, investor visibility, and ImpactXP rewards.",
+                  desc: "Submit your project for 30-day community voting. Top-voted projects get featured, investor visibility, and ImpactXP rewards.",
                   premium: false,
                 },
                 {
@@ -317,9 +308,9 @@ export default function LandingPage() {
               <motion.div variants={fadeInUp}>
                 <div className="bg-surface border border-border rounded-card p-8 shadow-card">
                   <div className="flex items-center gap-4 mb-6">
-                    <Avatar name="Ayush Kumar" size="xl" />
+                    <Avatar name="Ayush" size="xl" />
                     <div>
-                      <p className="text-xl font-semibold text-text-primary">Ayush Kumar</p>
+                      <p className="text-xl font-semibold text-text-primary">Ayush</p>
                       <RoleBadge role="founder" />
                     </div>
                   </div>
@@ -391,7 +382,7 @@ export default function LandingPage() {
               variants={fadeInUp}
               className="text-body text-text-secondary text-center mb-12 max-w-lg mx-auto"
             >
-              Submit to the 48-hour Launchpad. Top-voted projects get investor visibility and ImpactXP rewards.
+              Submit to the 30-day Launchpad. Top-voted projects get investor visibility and ImpactXP rewards.
             </motion.p>
             <motion.div
               className="grid grid-cols-1 md:grid-cols-3 gap-6"
@@ -479,7 +470,7 @@ export default function LandingPage() {
               variants={fadeInUp}
               className="font-display text-section text-text-primary text-center mb-12"
             >
-              Built by 11 teenage innovators.
+              Built by 6 teenage innovators.
             </motion.h2>
 
             {/* Founder Card */}
@@ -488,9 +479,9 @@ export default function LandingPage() {
               className="bg-surface border border-border rounded-card p-8 max-w-lg mx-auto mb-12"
             >
               <div className="flex items-center gap-4 mb-4">
-                <Avatar name="Ayush Kumar" size="xl" />
+                <Avatar name="Ayush" size="xl" />
                 <div>
-                  <h3 className="text-xl font-semibold text-text-primary">Ayush Kumar</h3>
+                  <h3 className="text-xl font-semibold text-text-primary">Ayush</h3>
                   <p className="text-small text-text-secondary">Age 15 · Founder & CEO</p>
                   <RoleBadge role="founder" className="mt-2" />
                 </div>

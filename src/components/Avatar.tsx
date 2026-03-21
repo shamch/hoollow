@@ -2,8 +2,8 @@ import React from "react";
 import { getInitials } from "@/lib/mockData";
 
 interface AvatarProps {
-    name: string;
-    image?: string;
+    name?: string | null;
+    image?: string | null;
     size?: "sm" | "md" | "lg" | "xl";
     className?: string;
 }
@@ -24,20 +24,22 @@ const colors = [
     "bg-surface-alt text-text-primary",
 ];
 
-function getColor(name: string): string {
+function getColor(name: string = "User"): string {
+    const safeName = name || "User";
     let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < safeName.length; i++) {
+        hash = safeName.charCodeAt(i) + ((hash << 5) - hash);
     }
     return colors[Math.abs(hash) % colors.length];
 }
 
 export default function Avatar({ name, image, size = "md", className = "" }: AvatarProps) {
+    const safeName = name || "User";
     if (image) {
         return (
             <img
                 src={image}
-                alt={name}
+                alt={safeName}
                 className={`${sizeMap[size]} rounded-full object-cover ${className}`}
             />
         );
@@ -45,9 +47,9 @@ export default function Avatar({ name, image, size = "md", className = "" }: Ava
 
     return (
         <div
-            className={`${sizeMap[size]} ${getColor(name)} rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${className}`}
+            className={`${sizeMap[size]} ${getColor(safeName)} rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${className}`}
         >
-            {getInitials(name)}
+            {getInitials(safeName)}
         </div>
     );
 }

@@ -72,7 +72,7 @@ export interface MockEndorsement {
 export const mockUsers: MockUser[] = [
     {
         id: "u1",
-        name: "Ayush Kumar",
+        name: "Ayush",
         email: "ayush@hoollow.com",
         image: "",
         role: "founder",
@@ -479,17 +479,12 @@ export const mockEndorsements: MockEndorsement[] = [
 
 // ─── Team Members ──────────────────────────────────────────
 export const teamMembers = [
-    { name: "Ayush Kumar", role: "Founder & CEO", age: 15 },
-    { name: "Riya Kapoor", role: "CTO" },
-    { name: "Aditya Joshi", role: "Lead Designer" },
-    { name: "Meera Iyer", role: "Backend Lead" },
-    { name: "Karan Thakur", role: "Frontend Developer" },
-    { name: "Divya Srinivasan", role: "ML Engineer" },
-    { name: "Harsh Pandey", role: "DevOps" },
-    { name: "Nisha Verma", role: "Community Lead" },
-    { name: "Siddharth Roy", role: "Mobile Developer" },
-    { name: "Pooja Agarwal", role: "Growth Lead" },
-    { name: "Rahul Deshmukh", role: "Content & Comms" },
+    { name: "Ayush", role: "Founder & CEO", age: 15 },
+    { name: "Jayish", role: "Developer", age: 16 },
+    { name: "Saksham", role: "Developer", age: 15 },
+    { name: "Faiyan", role: "Developer", age: 15 },
+    { name: "Darsh", role: "Marketing", age: 16 },
+    { name: "Harsh", role: "Marketing", age: 15 },
 ];
 
 // ─── XP History (for sparkline) ──────────────────────────────
@@ -520,11 +515,16 @@ export function formatXP(xp: number): string {
 export function getTimeAgo(dateStr: string): string {
     const now = new Date();
     const date = new Date(dateStr);
-    const diffMs = now.getTime() - date.getTime();
+    let diffMs = now.getTime() - date.getTime();
+
+    // Guard against future timestamps or clock skew
+    if (diffMs < 0) diffMs = 0;
+
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+    if (diffMins < 1) return "just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;

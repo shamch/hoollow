@@ -9,7 +9,6 @@ import {
     Send,
     Check,
     X,
-    ArrowRight,
     MessageCircle,
     Clock,
     CheckCircle2,
@@ -17,10 +16,9 @@ import {
     Sparkles,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import Navbar from "@/components/Navbar";
 import Avatar from "@/components/Avatar";
-import Button from "@/components/Button";
 import { showToast } from "@/store";
+import AppLayout from "@/components/AppLayout";
 
 interface CollabUser {
     id: string;
@@ -50,7 +48,8 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: 
 };
 
 function getTimeAgo(date: string) {
-    const ms = Date.now() - new Date(date).getTime();
+    let ms = Date.now() - new Date(date).getTime();
+    if (ms < 0) ms = 0;
     const mins = Math.floor(ms / 60000);
     if (mins < 1) return "just now";
     if (mins < 60) return `${mins}m ago`;
@@ -118,174 +117,170 @@ export default function CollabPage() {
     const currentItems = activeTab === "Incoming" ? incoming : activeTab === "Outgoing" ? outgoing : active;
 
     return (
-        <>
-            <Navbar />
-            <main className="min-h-screen bg-background pt-20">
-                <div className="max-w-3xl mx-auto px-4 py-8">
-                    {/* Header */}
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="w-11 h-11 bg-accent/20 rounded-full flex items-center justify-center">
-                            <Users size={22} className="text-accent" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-text-primary font-display">
-                                Collaborations
-                            </h1>
-                            <p className="text-small text-text-muted">
-                                Manage your collaboration requests
-                            </p>
-                        </div>
+        <AppLayout>
+            <div className="px-8 py-10">
+                {/* Header */}
+                <div className="flex items-center gap-4 mb-10">
+                    <div className="w-12 h-12 bg-accent/20 rounded-2xl flex items-center justify-center">
+                        <Users size={24} className="text-accent" />
                     </div>
+                    <div>
+                        <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">
+                            Collaborations
+                        </h1>
+                        <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mt-1">
+                            Assemble your dream team
+                        </p>
+                    </div>
+                </div>
 
-                    {/* Tabs */}
-                    <div className="flex items-center border-b border-border mb-6">
-                        {tabs.map((tab) => {
-                            const count = tab === "Incoming" ? incoming.length : tab === "Outgoing" ? outgoing.length : active.length;
-                            return (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`relative px-5 py-3 text-button font-medium transition-colors ${
-                                        activeTab === tab ? "text-text-primary" : "text-text-muted hover:text-text-secondary"
-                                    }`}
-                                >
-                                    <span className="flex items-center gap-2">
-                                        {tab}
-                                        {count > 0 && (
-                                            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-pill ${
-                                                activeTab === tab ? "bg-accent text-accent-inverse" : "bg-surface-alt text-text-muted"
-                                            }`}>
-                                                {count}
-                                            </span>
-                                        )}
-                                    </span>
-                                    {activeTab === tab && (
-                                        <motion.span
-                                            layoutId="collabTab"
-                                            className="absolute bottom-0 left-0 right-0 h-[2px] bg-text-primary rounded-full"
-                                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                        />
+                {/* Tabs */}
+                <div className="flex items-center gap-8 border-b border-white/5 mb-8">
+                    {tabs.map((tab) => {
+                        const count = tab === "Incoming" ? incoming.length : tab === "Outgoing" ? outgoing.length : active.length;
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`relative pb-4 text-xs font-black uppercase tracking-widest transition-all ${
+                                    activeTab === tab ? "text-white" : "text-zinc-600 hover:text-zinc-400"
+                                }`}
+                            >
+                                <span className="flex items-center gap-2">
+                                    {tab}
+                                    {count > 0 && (
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                            activeTab === tab ? "bg-accent text-white" : "bg-white/5 text-zinc-600"
+                                        }`}>
+                                            {count}
+                                        </span>
                                     )}
-                                </button>
-                            );
-                        })}
+                                </span>
+                                {activeTab === tab && (
+                                    <motion.span
+                                        layoutId="collabTabLine"
+                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"
+                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                    />
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Content */}
+                {loading ? (
+                    <div className="space-y-4">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="h-24 bg-white/5 rounded-3xl animate-pulse" />
+                        ))}
                     </div>
-
-                    {/* Content */}
-                    {loading ? (
-                        <div className="flex items-center justify-center py-16">
-                            <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full"
-                            />
+                ) : currentItems.length === 0 ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-center py-24 bg-[#111114] border border-white/5 rounded-[40px]"
+                    >
+                        <div className="w-20 h-20 mx-auto mb-6 bg-white/5 rounded-full flex items-center justify-center border border-white/5">
+                            {activeTab === "Incoming" ? <Inbox size={32} className="text-zinc-800" /> :
+                             activeTab === "Outgoing" ? <Send size={32} className="text-zinc-800" /> :
+                             <Sparkles size={32} className="text-zinc-800" />}
                         </div>
-                    ) : currentItems.length === 0 ? (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-center py-16"
-                        >
-                            <div className="w-16 h-16 mx-auto mb-4 bg-surface-alt rounded-full flex items-center justify-center">
-                                {activeTab === "Incoming" ? <Inbox size={28} className="text-text-muted opacity-40" /> :
-                                 activeTab === "Outgoing" ? <Send size={28} className="text-text-muted opacity-40" /> :
-                                 <Sparkles size={28} className="text-text-muted opacity-40" />}
-                            </div>
-                            <h3 className="text-lg font-semibold text-text-primary mb-2">
-                                {activeTab === "Incoming" ? "No incoming requests" :
-                                 activeTab === "Outgoing" ? "No outgoing requests" :
-                                 "No active collaborations"}
-                            </h3>
-                            <p className="text-text-muted text-small">
-                                {activeTab === "Incoming" ? "When someone wants to collaborate on your posts, you'll see requests here." :
-                                 activeTab === "Outgoing" ? "Send collab requests from posts marked 'Open to Collab' on the feed." :
-                                 "Accepted collaborations will appear here. You'll be able to DM your collaborators."}
-                            </p>
-                        </motion.div>
-                    ) : (
-                        <div className="space-y-3">
-                            <AnimatePresence mode="popLayout">
-                                {currentItems.map((item, i) => {
-                                    const user = activeTab === "Incoming" ? item.fromUser : activeTab === "Outgoing" ? item.toUser : (item.fromUser?.id === session?.user?.id ? item.toUser : item.fromUser);
-                                    const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
-                                    const contextTitle = item.post?.title || item.project?.name || "Unknown";
+                        <h3 className="text-xl font-black text-white italic uppercase mb-2">
+                            {activeTab === "Incoming" ? "Quiet here" :
+                             activeTab === "Outgoing" ? "Nothing sent" :
+                             "No active crews"}
+                        </h3>
+                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest max-w-xs mx-auto opacity-60">
+                            {activeTab === "Incoming" ? "When someone wants to collaborate, you'll see requests here." :
+                             activeTab === "Outgoing" ? "Send collab requests from posts on the feed." :
+                             "Accepted collaborations will appear here."}
+                        </p>
+                    </motion.div>
+                ) : (
+                    <div className="space-y-4">
+                        <AnimatePresence mode="popLayout">
+                            {currentItems.map((item, i) => {
+                                const user = activeTab === "Incoming" ? item.fromUser : activeTab === "Outgoing" ? item.toUser : (item.fromUser?.id === session?.user?.id ? item.toUser : item.fromUser);
+                                const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+                                const contextTitle = item.post?.title || item.project?.name || "Unknown";
 
-                                    return (
-                                        <motion.div
-                                            key={item.id}
-                                            layout
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, x: -20 }}
-                                            transition={{ delay: i * 0.04 }}
-                                            className="bg-surface border border-border rounded-card p-5 hover:shadow-card-hover transition-shadow"
-                                        >
-                                            <div className="flex items-start gap-4">
-                                                <Avatar name={user?.name || "User"} image={user?.image} size="lg" />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                        <span className="font-semibold text-text-primary text-[0.9375rem]">
-                                                            {user?.name || "User"}
-                                                        </span>
-                                                        <span className="text-label text-text-muted capitalize">{user?.role}</span>
-                                                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-pill flex items-center gap-1 ${statusCfg.color} ${statusCfg.bg}`}>
-                                                            {statusCfg.icon} {statusCfg.label}
-                                                        </span>
+                                return (
+                                    <motion.div
+                                        key={item.id}
+                                        layout
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ delay: i * 0.04 }}
+                                        className="bg-[#111114] border border-white/5 rounded-[32px] p-6 hover:border-white/10 transition-all group"
+                                    >
+                                        <div className="flex items-start gap-5">
+                                            <Avatar name={user?.name || "User"} image={user?.image} size="lg" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                                    <span className="text-sm font-black text-white group-hover:text-accent transition-colors">
+                                                        {user?.name || "User"}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{user?.role}</span>
+                                                    <div className={`text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1.5 border ${statusCfg.color} ${statusCfg.bg} border-current/10 uppercase tracking-tighter`}>
+                                                        {statusCfg.icon} {statusCfg.label}
                                                     </div>
-                                                    <p className="text-small text-text-secondary mb-1">
-                                                        {activeTab === "Incoming" ? "wants to collaborate on" : activeTab === "Outgoing" ? "you requested to collaborate on" : "collaborating on"}{" "}
-                                                        <strong className="text-text-primary">&ldquo;{contextTitle}&rdquo;</strong>
-                                                    </p>
-                                                    {item.message && (
-                                                        <p className="text-small text-text-muted bg-surface-alt rounded-btn px-3 py-2 mt-2 italic">
+                                                </div>
+                                                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
+                                                    {activeTab === "Incoming" ? "Requesting to collaborate on" : activeTab === "Outgoing" ? "You requested to join" : "Working together on"}{" "}
+                                                    <strong className="text-white">&ldquo;{contextTitle}&rdquo;</strong>
+                                                </p>
+                                                {item.message && (
+                                                    <div className="bg-black/40 rounded-2xl p-4 mt-4 relative overflow-hidden">
+                                                        <div className="absolute top-0 left-0 w-1 h-full bg-accent/20" />
+                                                        <p className="text-xs text-zinc-400 font-medium italic">
                                                             &ldquo;{item.message}&rdquo;
                                                         </p>
-                                                    )}
-                                                    <p className="text-label text-text-muted mt-2">{getTimeAgo(item.createdAt)}</p>
-                                                </div>
-                                                <div className="flex items-center gap-2 flex-shrink-0">
-                                                    {/* Incoming pending: Accept/Reject */}
-                                                    {activeTab === "Incoming" && item.status === "pending" && (
-                                                        <>
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                disabled={processingId === item.id}
-                                                                onClick={() => handleAction(item.id, "accepted")}
-                                                                className="flex items-center gap-1.5 px-3 py-2 bg-green-500/10 text-green-500 rounded-btn text-small font-semibold hover:bg-green-500/20 transition-colors disabled:opacity-50"
-                                                            >
-                                                                <Check size={14} /> Accept
-                                                            </motion.button>
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                disabled={processingId === item.id}
-                                                                onClick={() => handleAction(item.id, "rejected")}
-                                                                className="flex items-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-500 rounded-btn text-small font-semibold hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                                                            >
-                                                                <X size={14} /> Decline
-                                                            </motion.button>
-                                                        </>
-                                                    )}
-                                                    {/* Active: Message button */}
-                                                    {activeTab === "Active" && (
-                                                        <Link
-                                                            href="/messages"
-                                                            className="flex items-center gap-1.5 px-3 py-2 bg-accent text-accent-inverse rounded-btn text-small font-semibold hover:bg-accent-hover transition-colors"
-                                                        >
-                                                            <MessageCircle size={14} /> Message
-                                                        </Link>
-                                                    )}
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center gap-4 mt-4">
+                                                    <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-700 uppercase tracking-widest">
+                                                        <Clock size={10} /> {getTimeAgo(item.createdAt)}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
-                        </div>
-                    )}
-                </div>
-            </main>
-        </>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                {activeTab === "Incoming" && item.status === "pending" && (
+                                                    <>
+                                                        <button
+                                                            disabled={processingId === item.id}
+                                                            onClick={() => handleAction(item.id, "accepted")}
+                                                            className="flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.05] transition-all disabled:opacity-50"
+                                                        >
+                                                            <Check size={14} /> Accept
+                                                        </button>
+                                                        <button
+                                                            disabled={processingId === item.id}
+                                                            onClick={() => handleAction(item.id, "rejected")}
+                                                            className="flex items-center gap-2 px-5 py-2.5 bg-white/5 text-zinc-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 transition-all disabled:opacity-50"
+                                                        >
+                                                            <X size={14} /> Skip
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {activeTab === "Active" && (
+                                                    <Link
+                                                        href="/messages"
+                                                        className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.05] transition-all shadow-lg shadow-accent/20"
+                                                    >
+                                                        <MessageCircle size={14} /> DM
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
+                        </AnimatePresence>
+                    </div>
+                )}
+            </div>
+        </AppLayout>
     );
 }

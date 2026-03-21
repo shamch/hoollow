@@ -213,12 +213,12 @@ export default function FeedCard({ post, onUpvote, onPostUpdated, className = ""
             >
                 {/* Author row */}
                 <div className="flex items-center gap-3 mb-4">
-                    <Link href={`/profile/${post.author.id}`}>
+                    <Link href={`/profile/${post.author.username || post.author.id}`}>
                         <Avatar name={post.author.name || "User"} image={post.author.image} size="lg" />
                     </Link>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <Link href={`/profile/${post.author.id}`} className="hover:underline decoration-accent/30 underline-offset-2">
+                            <Link href={`/profile/${post.author.username || post.author.id}`} className="hover:underline decoration-accent/30 underline-offset-2">
                                 <span className="font-semibold text-text-primary text-[0.9375rem]">{post.author.name || "User"}</span>
                             </Link>
                             {post.author.username && (

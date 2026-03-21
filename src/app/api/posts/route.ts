@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { addXP } from "@/lib/xp";
 
 export async function GET() {
     try {
@@ -69,10 +70,13 @@ export async function POST(req: Request) {
             },
             include: {
                 author: {
-                    select: { id: true, name: true, image: true, role: true, impactXP: true },
+                    select: { id: true, name: true, username: true, image: true, role: true, impactXP: true },
                 },
             },
         });
+
+        // Award +5 XP for creating a post
+        await addXP(session.user.id, 5, `Created a Post: ${title ? title.substring(0, 20) : body.substring(0, 20)}...`);
 
         return NextResponse.json(post, { status: 201 });
     } catch (error) {
@@ -107,7 +111,7 @@ export async function PATCH(req: Request) {
             where: { id },
             data: updateData,
             include: {
-                author: { select: { id: true, name: true, image: true, role: true, impactXP: true } },
+                author: { select: { id: true, name: true, username: true, image: true, role: true, impactXP: true } },
             },
         });
 

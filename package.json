@@ -15,11 +15,13 @@
     "lucide-react": "^0.390.0",
     "next": "14.2.35",
     "next-auth": "^4.24.7",
+    "next-cloudinary": "^6.17.5",
     "prisma": "^5.14.0",
     "razorpay": "^2.9.6",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^2.12.7",
+    "resend": "^6.9.4",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

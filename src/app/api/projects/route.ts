@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { addXP } from "@/lib/xp";
 
 export async function GET() {
     try {
@@ -28,7 +29,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { name, description, tags, xpThreshold, githubUrl, imageUrl, openToCollab } = await req.json();
+        const { 
+            name, description, tags, xpThreshold, githubUrl, imageUrl, openToCollab,
+            logo, banner, media, demoUrl, isOpenSource 
+        } = await req.json();
 
         if (!name || !description) {
             return NextResponse.json({ error: "Name and description are required" }, { status: 400 });
@@ -42,14 +46,22 @@ export async function POST(req: Request) {
                 xpThreshold: xpThreshold || 0,
                 githubUrl: githubUrl || null,
                 imageUrl: imageUrl || null,
+                logo: logo || null,
+                banner: banner || null,
+                media: media || [],
+                demoUrl: demoUrl || null,
+                isOpenSource: isOpenSource || false,
                 openToCollab: openToCollab || false,
-                expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 authorId: session.user.id,
             },
             include: {
                 author: { select: { id: true, name: true, image: true, role: true, impactXP: true } },
             },
         });
+
+        // Award +10 XP for launching a project
+        await addXP(session.user.id, 10, `Launched a Project: ${name.substring(0, 20)}...`);
 
         return NextResponse.json(project, { status: 201 });
     } catch (error) {
@@ -65,7 +77,10 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { id, name, description, tags, githubUrl, imageUrl, openToCollab } = await req.json();
+        const { 
+            id, name, description, tags, githubUrl, imageUrl, openToCollab,
+            logo, banner, media, demoUrl, isOpenSource 
+        } = await req.json();
         if (!id) return NextResponse.json({ error: "Project ID required" }, { status: 400 });
 
         const existing = await prisma.project.findUnique({ where: { id }, select: { authorId: true } });
@@ -80,6 +95,11 @@ export async function PATCH(req: Request) {
         if (githubUrl !== undefined) updateData.githubUrl = githubUrl;
         if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
         if (openToCollab !== undefined) updateData.openToCollab = openToCollab;
+        if (logo !== undefined) updateData.logo = logo;
+        if (banner !== undefined) updateData.banner = banner;
+        if (media !== undefined) updateData.media = media;
+        if (demoUrl !== undefined) updateData.demoUrl = demoUrl;
+        if (isOpenSource !== undefined) updateData.isOpenSource = isOpenSource;
 
         const project = await prisma.project.update({
             where: { id },

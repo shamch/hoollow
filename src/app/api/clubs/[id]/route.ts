@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // Role hierarchy for permission checks
-const ROLE_LEVEL: Record<string, number> = { owner: 4, coowner: 3, manager: 2, member: 1 };
+const ROLE_LEVEL: Record<string, number> = { owner: 4, coowner: 3, moderator: 2, member: 1 };
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
     try {
@@ -37,6 +37,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             type: club.type,
             domain: club.domain,
             gradient: club.gradient,
+            banner: club.banner,
+            logo: club.logo,
+            themeColor: club.themeColor,
+            vibe: club.vibe,
+            visibility: club.visibility,
+            inviteCode: club.inviteCode,
+            permissions: club.permissions,
+            scheduledDeletion: club.scheduledDeletion,
             tags: club.tags,
             creatorId: club.creatorId,
             memberCount: club._count.members,
@@ -71,13 +79,19 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
             return NextResponse.json({ error: "Need co-owner or higher" }, { status: 403 });
         }
 
-        const { name, description, type, domain, gradient } = await req.json();
+        const { name, description, type, domain, gradient, banner, logo, themeColor, vibe, permissions, visibility } = await req.json();
         const updateData: any = {};
         if (name !== undefined) updateData.name = name;
         if (description !== undefined) updateData.description = description;
         if (type !== undefined) updateData.type = type;
         if (domain !== undefined) updateData.domain = domain;
         if (gradient !== undefined) updateData.gradient = gradient;
+        if (banner !== undefined) updateData.banner = banner;
+        if (logo !== undefined) updateData.logo = logo;
+        if (themeColor !== undefined) updateData.themeColor = themeColor;
+        if (vibe !== undefined) updateData.vibe = vibe;
+        if (permissions !== undefined) updateData.permissions = permissions;
+        if (visibility !== undefined) updateData.visibility = visibility;
 
         const club = await prisma.club.update({ where: { id: params.id }, data: updateData });
         return NextResponse.json(club);
